@@ -1,0 +1,38 @@
+name: DevSecOps
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.14"
+
+jobs:
+  build-and-test:
+    name: Build & unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies (build)
+        run: pip install -r requirements-dev.txt
+      - name: Check the app imports
+        run: PYTHONPATH=src python -c "import api.main"
+      - name: Run unit tests
+        run: |
+          mkdir -p reports
+          pytest --junitxml=reports/pytest.xml -v
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: reports/

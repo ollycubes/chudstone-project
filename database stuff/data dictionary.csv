@@ -1,0 +1,4 @@
+﻿Column,SubmissionID,CustomerID,MonthYear,TravelSpend,TravelCarSpend,TravelPubTransSpend,FoodSpend,UtilitiesSpend,DateSubmitted
+Datatype,Int,Int,String,Float,Float,Float,Float,Float,DateTime
+Nullable?,N,N,N,N,Y,Y,N,N,N
+Description,"Primary key for this table, must be unique",The ID for the user that submitted this data,The month that this transaction is for. format: (YYYY-MM),An example of type of spend the user can submit,Subcategory of travel,Subcategory of travel,An example of type of spend the user can submit,An example of type of spend the user can submit,The date and time of the submission

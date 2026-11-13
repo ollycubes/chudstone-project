@@ -43,3 +43,19 @@ class CalculateResponse(BaseModel):
     breakdown: list[BreakdownItem]
     recommendations: list[str]
 
+@app.exception_handler(Exception)
+async def unhandled_error(request: Request, exc: Exception) -> JSONResponse:
+    # Log details server-side; never expose stack traces to the client.
+    logger.exception("Unhandled error on %s", request.url.path)
+    return JSONResponse(status_code=500, content={"status": "error", "message": "Internal server error"})
+
+
+@app.get("/health")
+def health() -> dict:
+    return {"status": "ok"}
+
+
+@app.post("/calculate", response_model=CalculateResponse)
+def calculate(req: CalculateRequest) -> CalculateResponse:
+    # Sprint 1: mock response. Sprint 2: look up EmissionsFactors and calculate.
+    return CalculateResponse(status="success", totalCarbonKg=0, breakdown=[], recommendations=[])

@@ -4,9 +4,9 @@ from sqlalchemy import text
 #this is to see if you can receive data from the database
 db = SessionLocal()
 
-#Select everything from the customers table
-customers = db.execute(text("SELECT * FROM customers")).fetchall()
+#Select everything from the monthly_spend_submissions table
+submissions = db.execute(text("SELECT * FROM monthly_spend_submissions")).fetchall()
 
-for c in customers:
-    print(f"Customer ID: {c.customer_id}, Persona: {c.persona}, Travel Spend: {c.travel_spend}, Food Spend: {c.food_spend}, Utility Spend: {c.utility_spend}")
+for s in submissions:
+    print(f"Submission ID: {s.submission_id}, Customer ID: {s.customer_id}, Month: {s.month}, Travel Spend: {s.travel_spend}, Food Spend: {s.food_spend}, Utility Spend: {s.utility_spend}")
 db.close()

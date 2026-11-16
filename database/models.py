@@ -12,3 +12,16 @@ class MonthlySpendSubmissions(Base):
     subcategory = Column(String, nullable=False)
     amount = Column(Float, nullable=False)
     date_submitted = Column(DateTime, nullable=False)
+
+class Customers(Base):
+    __tablename__ = "customers"
+
+    customer_id = Column(Integer, primary_key=True, index=True)
+    persona = Column(String, nullable=False)
+
+class Categories(Base):
+    __tablename__ = "categories"
+
+    category_name = Column(String, nullable=False)
+    subcategory_name = Column(String, primary_key=True, index=True)
+    emission_factor = Column(Float, nullable=False)

@@ -37,3 +37,24 @@ jobs:
           name: unit-test-results
           path: reports/
 
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    permissions: 
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v4
+        with:
+          Languages: python
+          build-mode: none
+          queries: security-extended
+          config: 
+            paths-ignore: 
+              - tests
+      - uses: github/codeql-action/analyse@v4
+        with: 
+          category: "/language:python"

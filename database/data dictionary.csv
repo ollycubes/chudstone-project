@@ -1,0 +1,4 @@
+﻿Column,EntryID,SubmissionID,CustomerID,Month,Category,Subcategory,Amount,DateSubmitted,
+Datatype,Int,Int,Int,String,String,String,Float,DateTime,
+Nullable?,N,N,N,N,N,N,N,N,
+Description,"Primary key for this table, the key of each record",ID of the submission (the received data containing all the spending categories),The ID for the user that submitted this data,The month that this transaction is for. format: (YYYY-MM),The category name for the spend (Travel/Food/Utilities),The subcategory (e.g. car/taxi/food delivery),How much the customer spent on this subcategory,The date and time of the submission,

@@ -4,10 +4,11 @@ from database import Base
 class MonthlySpendSubmissions(Base):
     __tablename__ = "monthly_spend_submissions"
 
-    submission_id = Column(Integer, primary_key=True, index=True)
+    entry_id = Column(Integer, primary_key=True, index=True)
+    submission_id = Column(Integer, nullable=False)
     customer_id = Column(Integer, nullable=False)
     month = Column(String, nullable=False)
-    travel_spend = Column(Float, nullable=False, default=0.0)
-    food_spend = Column(Float, nullable=False, default=0.0)
-    utility_spend = Column(Float, nullable=False, default=0.0)
+    category = Column(String, nullable=False)
+    subcategory = Column(String, nullable=False)
+    amount = Column(Float, nullable=False)
     date_submitted = Column(DateTime, nullable=False)

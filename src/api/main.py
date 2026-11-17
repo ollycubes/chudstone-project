@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
-from .models import Submission, SubmissionItem, Subcategory
+from .models import MonthlySpendSubmissions
 
 
 @asynccontextmanager

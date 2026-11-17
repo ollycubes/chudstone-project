@@ -26,13 +26,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Carbon Footprint & Savings Advisor", lifespan=lifespan)
 
 
-# What the form sends. FastAPI checks the types and limits automatically
+# what the form sends. FastAPI checks the types and limits automatically
 # and replies 422 (with the reason) if anything doesn't fit.
 class SpendingForm(BaseModel):
     month: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$", description="YYYY-MM")
-    subcategory_id: list[int] = Field(min_length=1, max_length=50)
+    customer_id: int = Field(default=1, ge=1, description="placeholder for now, until we have a login system") # futureproofing
+    subcategory_id: list[str] = Field(min_length=1, max_length=50)
     amount: list[Annotated[float, Field(gt=0, le=100_000)]] = Field(min_length=1, max_length=50)
-    note: list[Annotated[str, Field(max_length=200)]] = []
 
 
 @app.post("/submit", status_code=201)

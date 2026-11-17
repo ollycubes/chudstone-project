@@ -1,5 +1,5 @@
 from sqlalchemy import Column, DateTime, Float, Integer, String
-from database import Base
+from .database import Base
 
 class MonthlySpendSubmissions(Base):
     __tablename__ = "monthly_spend_submissions"

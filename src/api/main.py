@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -26,6 +27,19 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Carbon Footprint & Savings Advisor", lifespan=lifespan)
+
+# this is for cors
+FRONTEND_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=FRONTEND_ORIGINS,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 
 # what the form sends. FastAPI checks the types and limits automatically

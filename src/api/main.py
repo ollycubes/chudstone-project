@@ -47,8 +47,24 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
             raise HTTPException(422, f"Entry {i}: unknown type {sub}.")
 
     # 3. Save the submission and all its items in one go
-    submission = Submission(month=form.month, items=items)
-    db.add(submission)
+    submission_id = (db.scalar(select(func.max(MonthlySpendSubmissions.submission_id))) or 0) + 1
+    now = datetime.now(timezone.utc)
+
+    rows = [
+        MonthlySpendSubmissions(
+            submission_id=submission_id,
+            customer_id=form.customer_id,
+            month=form.month,
+            category=CATEGORY_OF[sub],
+            subcategory=sub,
+            amount=round(amount, 2),
+            date_submitted=now,
+        )
+        for sub, amount in zip(form.subcategory, form.amount)
+    ]
+
+    # 4. all savec or none do
+    db.add_all(rows)
     db.commit()
 
-    return {"status": "saved", "submissionId": submission.id, "entries": len(items)}
+    return {"status": "saved", "submissionId": submission_id, "entries": len(rows)}

@@ -1,13 +1,14 @@
 from sqlalchemy import Column, DateTime, Float, Integer, String
+
 from .database import Base
 
 class MonthlySpendSubmissions(Base):
     __tablename__ = "monthly_spend_submissions"
 
     entry_id = Column(Integer, primary_key=True, index=True)
-    submission_id = Column(Integer, nullable=False)
+    submission_id = Column(Integer, nullable=False, index=True)
     customer_id = Column(Integer, nullable=False)
-    month = Column(String, nullable=False)
+    month = Column(String, nullable=False)  # format is year-month 2077-11
     category = Column(String, nullable=False)
     subcategory = Column(String, nullable=False)
     amount = Column(Float, nullable=False)

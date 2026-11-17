@@ -37,20 +37,14 @@ class SpendingForm(BaseModel):
 
 @app.post("/submit", status_code=201)
 def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db)) -> dict:
-    # 1. Every card needs a type and an amount (notes are optional)
+    # 1. every card needs a type and an amount (notes are optional)
     if len(form.subcategory_id) != len(form.amount):
-        raise HTTPException(422, "Each entry needs a type and an amount.")
-    notes = form.note + [""] * (len(form.amount) - len(form.note))  # pad missing notes
+        raise HTTPException(422, "each entry needs a type and an amount.")
 
-    # 2. Build one item per card, checking each type really exists
-    items = []
-    for i, (sub_id, amount, note) in enumerate(zip(form.subcategory_id, form.amount, notes), start=1):
-        subcategory = db.get(Subcategory, sub_id)
-        if subcategory is None:
-            raise HTTPException(422, f"Entry {i}: unknown type {sub_id}.")
-        items.append(
-            SubmissionItem(subcategory=subcategory, amount_gbp=round(amount, 2), note=note.strip() or None)
-        )
+    # 2. each subcategory checked and finds its parent category
+    for i, sub in enumerate(form.subcategory_id, start=1):
+        if sub not in CATEGORY_OF:
+            raise HTTPException(422, f"Entry {i}: unknown type {sub}.")
 
     # 3. Save the submission and all its items in one go
     submission = Submission(month=form.month, items=items)

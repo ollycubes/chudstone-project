@@ -14,6 +14,8 @@ CATEGORIES: dict[str, list[str]] = {
     "Utilities": ["Heating", "Electricity", "Water"],
 }
 
+CATEGORY_OF = {sub: cat for cat, subs in CATEGORIES.items() for sub in subs}
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

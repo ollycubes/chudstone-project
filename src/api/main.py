@@ -8,6 +8,12 @@ from sqlalchemy.orm import Session
 from .database import Base, engine, get_db
 from .models import MonthlySpendSubmissions
 
+CATEGORIES: dict[str, list[str]] = {
+    "Travel": ["Train", "Bus", "Self-owned car", "Car share", "Taxi", "Plane", "Other"],
+    "Food": ["Delivery", "Restaurant", "Supermarket"],
+    "Utilities": ["Heating", "Electricity", "Water"],
+}
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

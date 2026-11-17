@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from database import Base, SessionLocal, engine
-import models
+import api.models as models
 
 #create the database tables based on the models defined in models.py
 Base.metadata.create_all(bind=engine)

@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Form, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
@@ -60,7 +62,7 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
             amount=round(amount, 2),
             date_submitted=now,
         )
-        for sub, amount in zip(form.subcategory, form.amount)
+        for sub, amount in zip(form.subcategory_id, form.amount)
     ]
 
     # 4. all savec or none do

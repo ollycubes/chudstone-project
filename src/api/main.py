@@ -28,19 +28,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Carbon Footprint & Savings Advisor", lifespan=lifespan)
 
-# this is for cors
-FRONTEND_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=FRONTEND_ORIGINS,
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
-)
-
 
 # what the form sends. FastAPI checks the types and limits automatically
 # and replies 422 (with the reason) if anything doesn't fit.

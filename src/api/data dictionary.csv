@@ -1,0 +1,21 @@
+MonthlySpendSubmissions:,,,
+Column,Datatype,Nullable?,Description
+EntryID,Int,N,"Primary key for this table, the key of each record"
+SubmissionID,Int,N,ID of the submission (the received data containing all the spending categories)
+CustomerID,Int,N,The ID for the user that submitted this data
+Month,String,N,The month that this transaction is for. format: (YYYY-MM)
+Category,String,N,The category name for the spend (Travel/Food/Utilities)
+Subcategory,String,N,The subcategory (e.g. car/taxi/food delivery)
+Amount,Float,N,How much the customer spent on this subcategory
+DateSubmitted,DateTime,N,The date and time of the submission
+,,,
+Customers:,,,
+Column,Datatype,Nullable?,Description
+CustomerID,Int,N,Primary key for each customer
+Persona,String,Y,"If customer has persona, what persona is it?"
+,,,
+Categories:,,,
+Column,Datatype,Nullable?,Description
+CategoryName,String,N,The name of the category (Travel/Food/Utilities)
+SubcategoryName,String,N,The name of the subcategory (primary key)
+EmissionFactor,Float,N,The emission factor used to find carbon impact (emissionfactor*spendamount)

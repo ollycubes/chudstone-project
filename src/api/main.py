@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session

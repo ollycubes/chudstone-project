@@ -1,47 +1,364 @@
-  :root { --navy:#031a4f; --lime:#96dc64; --card:#eef2ff; --green:#6aa84f; --red:#f03438; --line:#c9d0e4; --muted:#5b6477; }
-  body { font-family:"Inter",system-ui,sans-serif; background:var(--navy); min-height:100vh; display:flex; flex-direction:column; }
-  .site-header { background:var(--lime); padding:.6rem 0; }
-  .brand { line-height:1.1; color:#0f172a; }
-  .brand b { display:block; font-size:.8rem; }
-  .brand small { font-size:.55rem; }
-  .pill { background:#fff; border-radius:999px; padding:.2rem .8rem; font-size:.7rem; font-weight:500; }
-  main { flex:1; }
-  .intro { max-width:44rem; margin:0 auto; padding:2.5rem 0 1.5rem; color:#fff; }
-  .intro h1 { font-size:clamp(1.6rem,3vw,2.25rem); font-weight:700; margin:0 0 .3rem; }
-  .intro p { font-size:.9rem; margin:0; color:#e6ebff; }
-  .spend-card { background:var(--card); border-radius:12px; padding:1.75rem 2rem 2rem; max-width:44rem; margin:0 auto; }
-  .req { color:#d6252c; }
-  .form-label { font-size:.78rem; font-weight:600; margin-bottom:.35rem; }
-  .form-select,.form-control,.input-group-text { font-size:.85rem; border-color:var(--line); }
-  .form-select:focus,.form-control:focus { border-color:var(--green); box-shadow:0 0 0 .2rem rgba(106,168,79,.25); }
-  #month-btn { cursor:pointer; background-color:#fff; }
-  .month-menu { min-width:16rem; border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 24px rgba(3,26,79,.15); }
-  .mp-nav { border:0; background:none; width:2rem; height:2rem; border-radius:50%; font-size:1.2rem; line-height:1; }
-  .mp-nav:hover:not(:disabled) { background:var(--card); }
-  .mp-nav:disabled { opacity:.3; cursor:not-allowed; }
-  .mp-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.35rem; }
-  .mp-m { border:0; background:none; border-radius:4px; padding:.5rem 0; font-size:.85rem; }
-  .mp-m:hover:not(:disabled) { background:var(--card); }
-  .mp-m.sel, .mp-m.sel:hover:not(:disabled) { background:var(--green); color:#fff; font-weight:600; }
-  .mp-m:disabled { opacity:.35; cursor:not-allowed; }
-  .cats { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; }
-  .cat { background:#fff; border:1px solid var(--line); border-radius:4px; text-align:left; font-size:.85rem; padding:.55rem .75rem; }
-  .cat.active { border:2px solid var(--green); font-weight:600; }
-  .cat:disabled { opacity:.45; cursor:not-allowed; }
-  .cat:focus-visible { outline:3px solid var(--navy); outline-offset:2px; }
-  .rows { margin:1.1rem 0 0 1rem; }
-  .exp { border-left:2px solid var(--line); padding-left:1.25rem; margin-bottom:2rem; }
-  .exp:last-child { margin-bottom:1.1rem; }
-  .del { border:0; background:none; padding:0; margin-bottom:.35rem; color:#0f172a; }
-  .del:hover { color:var(--red); }
-  .add { display:flex; align-items:center; gap:.35rem; margin:0 auto; background:none; border:0; font-size:.75rem; text-decoration:underline; }
-  .rm-cat { background:none; border:0; padding:0; margin-bottom:.35rem; font-size:.75rem; color:#b3261e; text-decoration:underline; }
-  .rm-cat:hover { color:#7f1a15; }
-  .section + .section { margin-top:1.75rem; }
-  .actions { display:flex; justify-content:space-between; margin-top:1.75rem; }
-  .btn-next,.btn-confirm { color:#fff; font-size:.8rem; font-weight:600; border:0; border-radius:4px; padding:.6rem 1.25rem; }
-  .btn-next { background:var(--green); } .btn-next:hover { background:#548a3d; color:#fff; }
-  .btn-confirm { background:var(--red); } .btn-confirm:hover { background:#d02428; color:#fff; }
-  footer { max-width:44rem; width:100%; margin:0 auto; padding:2rem 0 1.5rem; color:#b7c2e6; font-size:.65rem; }
-  .was-validated .form-select:invalid,.was-validated .form-control:invalid { border-color:#d6252c; }
-  @media (max-width:575.98px){ .spend-card{padding:1.25rem 1rem 1.5rem} .cats{grid-template-columns:1fr} .rows{margin-left:.25rem} .exp{padding-left:.85rem} }
+/* ==========================================================================
+CONTENTS
+   1. Design tokens (colours, sizes) - change the look of the whole page here
+   2. Base / page layout
+   3. Header
+   4. Intro (title + subtitle)
+   5. Form card
+   6. Form controls (labels, inputs, validation)
+   7. Month picker
+   8. Category buttons and sections
+   9. Expense rows
+  10. Card action buttons
+  11. Footer
+  12. Responsive (small screens)
+   ========================================================================== */
+
+
+/* ==========================================================================
+   1. DESIGN TOKENS
+   ========================================================================== */
+:root {
+  /* Brand colours */
+  --navy:  #011546;   /* page background and header text on light background */
+  --lightgreen: #EAF7E1;
+  --lime:  #95D868;   /* header bar, lightest shade of green */
+  --green: #77AE52;   /* , outline of selected boxes "Next category" button */
+  --card:  #F1F5FF;   /* form card background, lightest shade of NBS blue */
+  --blue: #D9DFEC;   /* used for line nxt to the expenses */
+  --red:   #F9383D;   /* NBS red, "Confirm spending" button and asterisks */
+  --white: #fff;        /* white, used for fill on form options */
+  --icon-colour: #596354;   /* grey used for icons and "Add another..." link */
+
+  /* Hover versions of the buttons */
+  --green-hover: #548a3d;
+  --red-hover:   #d02428;
+
+  --brownink:           #342A1D;   /* dark brown text colour */
+  --darkblueink:        #011546;   /* dark blue text colour */
+  --lightblueink:      #F1F5FF;   /* light blue text colour */
+
+  /* Borders and effects */
+  --greygreenline:       #CFD0BF;               /* input and card borders */
+  /* --green-ring: rgba(106, 168, 79, .25);       /* focus glow on inputs */
+  --menu-shadow: 0 8px 24px rgba(1, 21, 70, .15);  /* month picker shadow */
+
+  /* Sizes */
+  --content-width: 44rem;   /* max width of intro, card and footer */
+  --radius-card:   12px;
+  --radius-small:  4px;
+}
+
+
+/* ==========================================================================
+   2. BASE / PAGE LAYOUT
+   ========================================================================== */
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  background: var(--navy);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+
+/* ==========================================================================
+   3. HEADER
+   ========================================================================== */
+.site-header {
+  background: var(--lime);
+  padding: .6rem 0;
+}
+
+.brand {
+  line-height: 1.1;
+  color: var(--darkblueink);
+}
+
+.brand b {            /* "CAPSTONE" */
+  display: block;
+  font-size: .8rem;
+}
+
+.brand small {        /* tagline */
+  font-size: .55rem;
+}
+
+.pill {               /* "Example: Single Professional" badge */
+  background: var(--lightblueink); /* light blue matches NBS lightest blue shade */
+  border-radius: 999px;
+  padding: .2rem .8rem;
+  font-size: .7rem;
+  font-weight: 500;
+}
+
+
+/* ==========================================================================
+   4. INTRO
+   ========================================================================== */
+.intro {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 2.5rem 0 1.5rem;
+  color: var(--lightblueink);
+}
+
+.intro h1 {
+  font-size: clamp(1.6rem, 3vw, 2.25rem);   /* scales with screen width */
+  font-weight: 700;
+  margin: 0 0 .3rem;
+}
+
+.intro p {
+  font-size: .9rem;
+  margin: 0;
+  color: var(--lightblueink);
+}
+
+
+/* ==========================================================================
+   5. FORM CARD
+   ========================================================================== */
+.spend-card {
+  background: var(--card);
+  border-radius: var(--radius-card);
+  padding: 1.75rem 2rem 2rem;
+  max-width: var(--content-width);
+  margin: 0 auto;
+}
+
+
+/* ==========================================================================
+   6. FORM CONTROLS
+   ========================================================================== */
+.req {                /* red asterisk after required labels */
+  color: var(--red);
+}
+
+.form-label {
+  font-size: .78rem;
+  font-weight: 600;
+  margin-bottom: .35rem;
+}
+
+.form-select,
+.form-control,
+.input-group-text {
+  font-size: .85rem;
+  border-color: var(--greygreenline);
+}
+
+.form-select:focus,
+.form-control:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 .2rem var(--green-ring);
+}
+
+/* Red border on invalid fields (only after the first submit attempt) */
+.was-validated .form-select:invalid,
+.was-validated .form-control:invalid {
+  border-color: var(--red);
+}
+
+
+/* ==========================================================================
+   7. MONTH PICKER (custom dropdown with year arrows and a 3x4 month grid)
+   ========================================================================== */
+#month-btn {          /* the closed box showing "November 2026" */
+  cursor: pointer;
+  background-color: var(--white);
+}
+
+.month-menu {         /* the dropdown panel */
+  min-width: 13rem;                 /* was 16rem */
+  border: 1px solid var(--greygreenline);
+  border-radius: 8px;
+  box-shadow: var(--menu-shadow);
+}
+
+#mp-year {            /* the year between the arrows */
+  font-size: .85rem;
+}
+
+/* Year arrows (‹ ›) */
+.mp-nav {
+  border: 0;
+  background: none;
+  width: 1.6rem;                    /* was 2rem */
+  height: 1.6rem;                   /* was 2rem */
+  border-radius: 50%;
+  font-size: 1rem;                  /* was 1.2rem */
+  color: var(--brownink);
+  line-height: 1;
+}
+.mp-nav:hover:not(:disabled) { background: var(--card); }
+.mp-nav:disabled             { opacity: .3; cursor: not-allowed; }
+
+/* Month grid */
+.mp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .2rem;                       /* was .35rem */
+}
+
+.mp-m {               /* one month button */
+  border: 0;
+  background: none;
+  border-radius: var(--radius-small);
+  color: var(--brownink);
+  padding: .3rem 0;                 /* was .5rem 0 */
+  font-size: .78rem;                /* was .85rem */
+}
+.mp-m:hover:not(:disabled) { background: var(--card); }
+.mp-m:disabled             { opacity: .35; cursor: not-allowed; }   /* future months */
+
+/* Selected month. The :hover selector keeps the green when hovered
+   (it must stay below the plain :hover rule above). */
+.mp-m.sel,
+.mp-m.sel:hover:not(:disabled) {
+  background: var(--lightgreen);
+  color: var(--brownink);
+  font-weight: 600;
+}
+
+
+/* ==========================================================================
+   8. CATEGORY BUTTONS AND SECTIONS
+   ========================================================================== */
+.section + .section {            /* gap between stacked categories */
+  margin-top: 1.75rem;
+}
+
+.cats {                          /* row of category buttons */
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .75rem;
+}
+
+.cat {
+  background: var(--white);
+  border: 1px solid var(--greygreenline);
+  border-radius: var(--radius-small);
+  color: var(--brownink);
+  text-align: left;
+  font-size: .85rem;
+  line-height: 1.1;
+  padding: .55rem .75rem;
+}
+.cat.active         { border: 2px solid var(--green); font-weight: 600; }
+.cat:disabled       { opacity: .45; cursor: not-allowed; }   /* already used */
+.cat:focus-visible  { outline: 3px solid var(--navy); outline-offset: 2px; }
+
+.rm-cat {                        /* "Remove category" link */
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-bottom: .35rem;
+  font-size: .75rem;
+  color: var(--icon-colour);
+  text-decoration: underline;
+}
+.rm-cat:hover { color: var(--red-hover); }
+
+
+/* ==========================================================================
+   9. EXPENSE ROWS
+   ========================================================================== */
+.rows {                          /* wrapper for all rows in a category */
+  margin: 1.1rem 0 0 1rem;
+}
+
+.exp {                           /* one expense (type, amount, note) */
+  border-left: 2px solid var(--blue);
+  padding-left: 1.25rem;
+  margin-bottom: 2rem;           /* space between expenses */
+}
+.exp:last-child {
+  margin-bottom: 1.1rem;         /* smaller gap above "Add another..." */
+}
+
+.del {                           /* bin icon */
+  border: 0;
+  background: none;
+  padding: 0;
+  margin-bottom: .35rem;
+  color: var(--icon-colour);
+}
+.del:hover { color: var(--red-hover); }
+
+.add {                           /* "Add another ... expense" link */
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  margin: 0 auto;
+  background: none;
+  border: 0;
+  font-size: .75rem;
+  color: var(--icon-colour);
+  text-decoration: underline;
+}
+.add:hover { color: var(--darkblueink); }
+
+
+/* ==========================================================================
+   10. CARD ACTION BUTTONS
+   ========================================================================== */
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.75rem;
+}
+
+.btn-next,
+.btn-confirm {                   /* shared button styling */
+  color: var(--white);
+  font-size: .8rem;
+  font-weight: 600;
+  border: 0;
+  border-radius: var(--radius-small);
+  padding: .6rem 1.25rem;
+}
+
+.btn-next          { background: var(--green); }
+.btn-confirm       { background: var(--red); }
+
+/* Keep the text white in every state (Bootstrap changes it on hover/click) */
+.btn-next:hover,
+.btn-next:focus,
+.btn-next:active,
+.btn-confirm:hover,
+.btn-confirm:focus,
+.btn-confirm:active { color: var(--white); }
+
+.btn-next:hover    { background: var(--green-hover); }
+.btn-confirm:hover { background: var(--red-hover); }
+
+
+/* ==========================================================================
+   11. FOOTER
+   ========================================================================== */
+footer {
+  max-width: var(--content-width);
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 0 1.5rem;
+  color: var(--lightblueink);
+  font-size: .65rem;
+}
+
+
+/* ==========================================================================
+   12. RESPONSIVE - phones and small screens (under 576px)
+   Keep this last so it overrides the rules above.
+   ========================================================================== */
+@media (max-width: 575.98px) {
+  .spend-card { padding: 1.25rem 1rem 1.5rem; }
+  .cats       { grid-template-columns: 1fr; }   /* stack category buttons */
+  .rows       { margin-left: .25rem; }
+  .exp        { padding-left: .85rem; }
+}
+

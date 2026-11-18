@@ -2,8 +2,8 @@
 
 from datetime import datetime, timezone
 
-from database import Base, SessionLocal, engine
-from models import *
+from .database import Base, SessionLocal, engine
+from .models import *
 
 # (submission_id, customer_id, month, category, subcategory, notes, amount)
 SENDSUBMISSIONSSEED = [

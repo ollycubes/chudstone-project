@@ -2,10 +2,10 @@
 
 from datetime import datetime, timezone
 
-from .database import Base, SessionLocal, engine
-from .models import MonthlySpendSubmissions, Customers, Categories
+from database import Base, SessionLocal, engine
+from models import *
 
-# (submission_id, customer_id, month, category, subcategory, amount)
+# (submission_id, customer_id, month, category, subcategory, notes, amount)
 SENDSUBMISSIONSSEED = [
     (1, 1, "2026-10", "Travel", "Car", None, 280.0),
     (1, 1, "2026-10", "Travel", "Bus", None, 20.0),
@@ -41,7 +41,7 @@ CATEGORIESSEED = [
     ("Travel", "Taxi", 0.25),
     ("Travel", "Carshare", 0.192),
     ("Travel", "Airplane", 0.103),
-    ("Food", "Supermarket", 0.5),
+    ("Food", "Groceries", 0.5),
     ("Food", "Delivery", 0.3),
     ("Food", "Restaurant/Dine out", 0.4),
     ("Utilities", "Electricity", 0.233),
@@ -59,9 +59,9 @@ with SessionLocal() as db:
         db.add_all(
             MonthlySpendSubmissions(
                 submission_id=sid, customer_id=cid, month=month,
-                category=cat, subcategory=sub, amount=amount, date_submitted=now,
+                category=cat, subcategory=sub, notes=notes, amount=amount, date_submitted=now,
             )
-            for sid, cid, month, cat, sub, amount in SENDSUBMISSIONSSEED
+            for sid, cid, month, cat, sub, notes, amount in SENDSUBMISSIONSSEED
         )
         db.commit()
         print("db seeded with monthly spend submissions")

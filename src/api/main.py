@@ -1,9 +1,11 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Form, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -13,11 +15,15 @@ from .models import MonthlySpendSubmissions
 
 CATEGORIES: dict[str, list[str]] = {
     "Travel": ["Train", "Bus", "Self-owned car", "Car share", "Taxi", "Plane", "Other"],
-    "Food": ["Delivery", "Restaurant", "Supermarket"],
+    "Food": ["Delivery", "Restaurant", "Groceries"],
     "Utilities": ["Heating", "Electricity", "Water"],
 }
 
 CATEGORY_OF = {sub: cat for cat, subs in CATEGORIES.items() for sub in subs}
+
+# the html/css/js lives in "Website dir" at the repo root; the API serves it so
+# the page and the API share one origin (no CORS needed)
+WEBSITE_DIR = Path(__file__).resolve().parents[2] / "Website dir"
 
 
 @asynccontextmanager
@@ -36,6 +42,17 @@ class SpendingForm(BaseModel):
     customer_id: int = Field(default=1, ge=1, description="placeholder for now, until we have a login system") # futureproofing
     subcategory_id: list[str] = Field(min_length=1, max_length=50)
     amount: list[Annotated[float, Field(gt=0, le=100_000)]] = Field(min_length=1, max_length=50)
+
+
+@app.get("/categories")
+def categories() -> dict[str, list[str]]:
+    # the form builds its dropdowns from this, so front and back always agree
+    return CATEGORIES
+
+
+@app.get("/", include_in_schema=False)
+def home() -> RedirectResponse:
+    return RedirectResponse("/spending-form/form.html")
 
 
 @app.post("/submit", status_code=201)
@@ -71,3 +88,6 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
     db.commit()
 
     return {"status": "saved", "submissionId": submission_id, "entries": len(rows)}
+
+# keep this last: anything not matched by an API route above falls through to the website files
+app.mount("/", StaticFiles(directory=WEBSITE_DIR, html=True), name="website")

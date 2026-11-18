@@ -7,7 +7,7 @@ from .models import *
 
 # (submission_id, customer_id, month, category, subcategory, notes, amount)
 SENDSUBMISSIONSSEED = [
-    (1, 1, "2026-10", "Travel", "Car", None, 280.0),
+    (1, 1, "2026-10", "Travel", "Self-owned car", None, 280.0),
     (1, 1, "2026-10", "Travel", "Bus", None, 20.0),
     (1, 1, "2026-10", "Travel", "Train", None, 63.4),
     (1, 1, "2026-10", "Food", "Groceries", None, 320.0),
@@ -15,7 +15,7 @@ SENDSUBMISSIONSSEED = [
     (1, 1, "2026-10", "Utilities", "Electricity", None, 40.0),
     (1, 1, "2026-10", "Utilities", "Water", None, 30.0),
     (1, 1, "2026-10", "Utilities", "Heating", None, 50.0),
-    (2, 2, "2026-10", "Travel", "Car", None, 300.0),
+    (2, 2, "2026-10", "Travel", "Self-owned car", None, 300.0),
     (2, 2, "2026-10", "Travel", "Train", None, 25.0),
     (2, 2, "2026-10", "Food", "Groceries", None, 250.0),
     (2, 2, "2026-10", "Food", "Restaurant/Dine out", None, 60.0),
@@ -33,7 +33,7 @@ CUSTOMERSSEED = [
 ]
 
 CATEGORIESSEED = [
-    ("Travel", "Car", 0.192),
+    ("Travel", "Self-owned car", 0.192),
     ("Travel", "Motorbike", 0.103),
     ("Travel", "Bus", 0.105),
     ("Travel", "Train", 0.041),

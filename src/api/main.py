@@ -15,7 +15,7 @@ from .models import MonthlySpendSubmissions
 
 CATEGORIES: dict[str, list[str]] = {
     "Travel": ["Train", "Bus", "Self-owned car", "Car share", "Taxi", "Plane", "Other"],
-    "Food": ["Delivery", "Restaurant", "Supermarket"],
+    "Food": ["Delivery", "Restaurant", "Groceries"],
     "Utilities": ["Heating", "Electricity", "Water"],
 }
 

@@ -52,7 +52,7 @@ def categories() -> dict[str, list[str]]:
 
 @app.get("/", include_in_schema=False)
 def home() -> RedirectResponse:
-    return RedirectResponse("/form.html")
+    return RedirectResponse("/spending-form/form.html")
 
 
 @app.post("/submit", status_code=201)

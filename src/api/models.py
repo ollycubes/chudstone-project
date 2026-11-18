@@ -1,6 +1,6 @@
 from sqlalchemy import Column, DateTime, Float, Integer, String
 
-from .database import Base
+from database import Base
 
 class MonthlySpendSubmissions(Base):
     __tablename__ = "monthly_spend_submissions"
@@ -12,6 +12,7 @@ class MonthlySpendSubmissions(Base):
     category = Column(String, nullable=False)
     subcategory = Column(String, nullable=False)
     amount = Column(Float, nullable=False)
+    notes = Column(String, nullable=True)
     date_submitted = Column(DateTime, nullable=False)
 
 class Customers(Base):

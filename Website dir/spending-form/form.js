@@ -1,9 +1,6 @@
-const TYPES = {
-  Travel:    ["Trains","Bus","Self-owned car","Car share","Taxi","Plane","Other"],
-  Food:      ["Grocery","Food delivery","Restaurant","Other"],
-  Utilities: ["Electricity","Gas","Water","Other"]
-};
-const CATS = Object.keys(TYPES);
+// filled from the backend (GET /categories) so the options always match what /submit accepts
+let TYPES = {};
+let CATS = [];
 const sections = document.getElementById("sections");
 const nextBtn = document.getElementById("next");
 const msg = document.getElementById("msg");
@@ -67,7 +64,7 @@ const rowHTML = (cat) => `
         </div>
         <div class="input-group">
           <span class="input-group-text">£</span>
-          <input type="number" name="amount" class="form-control" placeholder="0.00" step="0.01" min="0" required>
+          <input type="number" name="amount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
         </div>
       </div>
       <div class="col-12">
@@ -140,8 +137,23 @@ nextBtn.addEventListener("click", () => {
   if (free) { addSection(free); sections.lastElementChild.scrollIntoView({behavior:"smooth", block:"center"}); }
 });
 
-document.getElementById("form").addEventListener("submit", e => {
-  e.preventDefault();                       // demo only: swap for a real POST to /spending/add
+function showMsg(kind, text) {
+  msg.className = `alert alert-${kind}`;
+  msg.textContent = text;
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+async function errorText(res) {
+  try {
+    const { detail } = await res.json();
+    if (Array.isArray(detail)) return detail.map(d => d.msg).join("; ");
+    if (detail) return detail;
+  } catch {}
+  return `Server error (${res.status}).`;
+}
+
+document.getElementById("form").addEventListener("submit", async e => {
+  e.preventDefault();
   const form = e.target, rows = [...form.querySelectorAll(".exp")];
   const blank = r => [...r.querySelectorAll("select,input:not([type=hidden])")].every(x => !x.value);
   const skipped = rows.filter(blank);
@@ -152,12 +164,33 @@ document.getElementById("form").addEventListener("submit", e => {
   msg.className = "alert";
   if (skipped.length === rows.length) { msg.classList.add("alert-danger"); msg.textContent = "Add at least one expense before confirming."; return; }
   if (bad) { msg.classList.add("d-none"); bad.reportValidity(); return; }
-  const total = rows.filter(r => !blank(r)).reduce((t, r) => t + (parseFloat(r.querySelector("[name=amount]").value) || 0), 0);
+  const filled = rows.filter(r => !blank(r));
+  const total = filled.reduce((t, r) => t + (parseFloat(r.querySelector("[name=amount]").value) || 0), 0);
   const [y, m] = form.month.value.split("-");
   const monthName = new Date(y, m - 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
-  msg.textContent = `Spending confirmed for ${monthName}: £${total.toFixed(2)} across ${rows.length - skipped.length} expense(s).`;
-  msg.classList.add("alert-success");
-  window.scrollTo({top:0, behavior:"smooth"});
+
+  const body = new FormData();
+  body.append("month", form.month.value);
+  filled.forEach(r => {
+    body.append("subcategory_id", r.querySelector("[name=expense_type]").value);
+    body.append("amount", r.querySelector("[name=amount]").value);
+  });
+
+  const submitBtn = form.querySelector("[type=submit]");
+  submitBtn.disabled = true;
+  try {
+    const res = await fetch(form.action, { method: "POST", body });
+    if (!res.ok) return showMsg("danger", `Could not save: ${await errorText(res)}`);
+    const data = await res.json();
+    showMsg("success", `Spending confirmed for ${monthName}: £${total.toFixed(2)} across ${data.entries} expense(s). (Submission #${data.submissionId})`);
+  } catch {
+    showMsg("danger", "Could not reach the server. Is the API running?");
+  } finally {
+    submitBtn.disabled = false;
+  }
 });
 
-addSection("Travel");
+fetch("/categories")
+  .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
+  .then(data => { TYPES = data; CATS = Object.keys(TYPES); addSection(CATS[0]); })
+  .catch(() => showMsg("danger", "Could not load spending categories from the server."));

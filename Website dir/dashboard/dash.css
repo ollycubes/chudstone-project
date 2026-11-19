@@ -1,0 +1,50 @@
+.stat-row {
+  max-width: var(--content-width);
+  margin: 0 auto 1rem;
+}
+
+.stat-card {
+  background: var(--card);
+  border-radius: var(--radius-card);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: var(--darkblueink);
+}
+
+.stat-card-green {
+  background: var(--lightgreen);
+  border: 2px solid var(--green);
+}
+
+.stat-label {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--brownink);
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.entries-table {
+  --bs-table-bg: transparent;
+  font-size: .85rem;
+  color: var(--brownink);
+}
+
+.entries-table th {
+  font-size: .75rem;
+  color: var(--darkblueink);
+  border-bottom: 2px solid var(--blue);
+}
+
+.entries-table td {
+  border-bottom: 1px solid var(--blue);
+}
+
+a.btn-next {
+  text-decoration: none;
+}

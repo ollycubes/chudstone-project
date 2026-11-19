@@ -107,5 +107,25 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
 
     return {"status": "saved", "submissionId": submission_id, "entries": len(rows)}
 
+
+def category_totals(db: Session, customer_id: int, month: str | None = None):
+    M = MonthlySpendSubmissions
+    stmt = (
+        select(
+            M.category,
+            func.sum(M.amount).label("spend"),        
+            func.sum(M.carbon_impact).label("carbon"),
+        )
+        .where(M.customer_id == customer_id)
+        .group_by(M.category)                          
+        .order_by(func.sum(M.carbon_impact).desc())     
+    )
+    if month:
+        stmt = stmt.where(M.month == month)
+
+    # e.g. of shape 
+    return db.execute(stmt).all()
+
+
 # keep this last: anything not matched by an API route above falls through to the website files
 app.mount("/", StaticFiles(directory=WEBSITE_DIR, html=True), name="website")

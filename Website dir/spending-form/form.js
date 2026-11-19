@@ -182,7 +182,7 @@ document.getElementById("form").addEventListener("submit", async e => {
     const res = await fetch(form.action, { method: "POST", body });
     if (!res.ok) return showMsg("danger", `Could not save: ${await errorText(res)}`);
     const data = await res.json();
-    showMsg("success", `Spending confirmed for ${monthName}: £${total.toFixed(2)} across ${data.entries} expense(s). (Submission #${data.submissionId})`);
+    window.location.href = `/dashboard/dash.html?submission=${data.submissionId}`;
   } catch {
     showMsg("danger", "Could not reach the server. Is the API running?");
   } finally {

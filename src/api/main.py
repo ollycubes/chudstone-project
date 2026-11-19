@@ -50,6 +50,14 @@ def categories() -> dict[str, list[str]]:
     # the form builds its dropdowns from this, so front and back always agree
     return CATEGORIES
 
+@app.get("/totals")
+def totals(month: str | None = None, db: Session = Depends(get_db)) -> list[dict]:
+    rows = category_totals(db, customer_id=1, month=month)
+    return [
+        {"category": rows.category, "spend": round(rows.spend, 2), "carbon": round(rows.carbon, 2)}
+        for rows in rows
+    ]
+
 
 @app.get("/", include_in_schema=False)
 def home() -> RedirectResponse:
@@ -123,7 +131,8 @@ def category_totals(db: Session, customer_id: int, month: str | None = None):
     if month:
         stmt = stmt.where(M.month == month)
 
-    # e.g. of shape 
+    # e.g. of JSON shape with values -> Version containing subcategories in the JSON form too
+
     return db.execute(stmt).all()
 
 

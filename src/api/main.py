@@ -19,7 +19,7 @@ CATEGORIES: dict[str, list[str]] = {
     "Utilities": ["Heating", "Electricity", "Water"],
 }
 
-CATEGORY_OF = {sub: cat for cat, subs in CATEGORIES.items() for sub in subs}
+CATEGORY_OF = {sub: cat for cat, subs in CATEGORIES.items() for sub in subs} # Would this not cause an issue if we ended up with two subcategories that went by the same name, such as "Other"?
 
 # the html/css/js lives in "Website dir" at the repo root; the API serves it so
 # the page and the API share one origin (no CORS needed)
@@ -54,6 +54,10 @@ def categories() -> dict[str, list[str]]:
 def home() -> RedirectResponse:
     return RedirectResponse("/spending-form/form.html")
 
+@app.get("/dashboard", include_in_schema=False)
+def dashboard() -> RedirectResponse:
+    return RedirectResponse("/dashboard/dashboard.html")
+
 
 @app.post("/submit", status_code=201)
 def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db)) -> dict:
@@ -67,7 +71,7 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
             raise HTTPException(422, f"Entry {i}: unknown type {sub}.")
 
     # 3. Save the submission and all its items in one go
-    submission_id = (db.scalar(select(func.max(MonthlySpendSubmissions.submission_id))) or 0) + 1
+    submission_id = (db.scalar(select(func.max(MonthlySpendSubmissions.submission_id))) or 0) + 1  # Could this give two simultaneous requests the same ID?
     now = datetime.now(timezone.utc)
 
     rows = [
@@ -83,7 +87,7 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
         for sub, amount in zip(form.subcategory_id, form.amount)
     ]
 
-    # 4. all savec or none do
+    # 4. all save or none do
     db.add_all(rows)
     db.commit()
 

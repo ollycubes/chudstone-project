@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 from typing import Annotated
 
@@ -11,7 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
-from .models import MonthlySpendSubmissions
+from .models import Categories, MonthlySpendSubmissions
 
 CATEGORIES: dict[str, list[str]] = {
     "Travel": ["Train", "Bus", "Self-owned car", "Car share", "Taxi", "Plane", "Other"],
@@ -41,7 +42,7 @@ class SpendingForm(BaseModel):
     month: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$", description="YYYY-MM")
     customer_id: int = Field(default=1, ge=1, description="placeholder for now, until we have a login system") # futureproofing
     subcategory_id: list[str] = Field(min_length=1, max_length=50)
-    amount: list[Annotated[float, Field(gt=0, le=100_000)]] = Field(min_length=1, max_length=50)
+    amount: list[Annotated[Decimal, Field(gt=0, le=1_000_000_000, decimal_places=2)]] = Field(min_length=1, max_length=50)
 
 
 @app.get("/categories")
@@ -66,7 +67,19 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
         if sub not in CATEGORY_OF:
             raise HTTPException(422, f"Entry {i}: unknown type {sub}.")
 
-    # 3. Save the submission and all its items in one go
+    # 3. Receive the emission factors for the given subcategories
+    emission_factors = dict(
+        db.execute(
+            select(Categories.subcategory_name, Categories.emission_factor).where(
+                Categories.subcategory_name.in_(form.subcategory_id)
+            )
+        ).all()
+    )
+    for i, sub in enumerate(form.subcategory_id, start=1):
+        if sub not in emission_factors:
+            raise HTTPException(422, f"Entry {i}: no emission factor configured for {sub}.")
+
+    # 4. Save the submission and all its items in one go
     submission_id = (db.scalar(select(func.max(MonthlySpendSubmissions.submission_id))) or 0) + 1
     now = datetime.now(timezone.utc)
 
@@ -77,13 +90,14 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
             month=form.month,
             category=CATEGORY_OF[sub],
             subcategory=sub,
-            amount=round(amount, 2),
+            amount=float(amount),
+            carbon_impact=((float(amount)*100)*(emission_factors[sub]*1000))/100000, #amount*emission_factor but avoids floating point rounding errors
             date_submitted=now,
         )
         for sub, amount in zip(form.subcategory_id, form.amount)
     ]
 
-    # 4. all savec or none do
+    # 5. all saved or none do
     db.add_all(rows)
     db.commit()
 

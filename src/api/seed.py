@@ -52,25 +52,6 @@ CATEGORIESSEED = [
 Base.metadata.create_all(bind=engine)  # create the tables if they don't exist
 
 with SessionLocal() as db:
-    if db.query(MonthlySpendSubmissions).first():
-        print("Database already seeded with monthly spend submissions")
-    else:
-        now = datetime.now(timezone.utc)
-        db.add_all(
-            MonthlySpendSubmissions(
-                submission_id=sid, customer_id=cid, month=month,
-                category=cat, subcategory=sub, notes=notes, amount=amount, date_submitted=now,
-            )
-            for sid, cid, month, cat, sub, notes, amount in SENDSUBMISSIONSSEED
-        )
-        db.commit()
-        print("db seeded with monthly spend submissions")
-    if db.query(Customers).first():
-        print("Database already seeded with customers")
-    else:
-        db.add_all(Customers(customer_id=cid, persona=name) for cid, name in CUSTOMERSSEED)
-        db.commit()
-        print("db seeded with customers")
     if db.query(Categories).first():
         print("Database already seeded with categories")
     else:
@@ -82,3 +63,32 @@ with SessionLocal() as db:
         )
         db.commit()
         print("db seeded with categories")
+
+    #create a dictionary of emission factors for creating MonthlySpendSubmissions
+    emission_factors = {
+        subcategory: emission_factor
+        for subcategory, emission_factor in db.query(
+            Categories.subcategory_name, Categories.emission_factor
+        ).all()
+    }
+
+    if db.query(MonthlySpendSubmissions).first():
+        print("Database already seeded with monthly spend submissions")
+    else:
+        now = datetime.now(timezone.utc)
+        db.add_all(
+            MonthlySpendSubmissions(
+                submission_id=sid, customer_id=cid, month=month,
+                category=cat, subcategory=sub, notes=notes, amount=amount,
+                carbon_impact=amount * emission_factors[sub], date_submitted=now,
+            )
+            for sid, cid, month, cat, sub, notes, amount in SENDSUBMISSIONSSEED
+        )
+        db.commit()
+        print("db seeded with monthly spend submissions")
+    if db.query(Customers).first():
+        print("Database already seeded with customers")
+    else:
+        db.add_all(Customers(customer_id=cid, persona=name) for cid, name in CUSTOMERSSEED)
+        db.commit()
+        print("db seeded with customers")

@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
-from .models import MonthlySpendSubmissions
+from .models import Categories, MonthlySpendSubmissions
 
 CATEGORIES: dict[str, list[str]] = {
     "Travel": ["Train", "Bus", "Self-owned car", "Car share", "Taxi", "Plane", "Other"],
@@ -66,7 +66,19 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
         if sub not in CATEGORY_OF:
             raise HTTPException(422, f"Entry {i}: unknown type {sub}.")
 
-    # 3. Save the submission and all its items in one go
+    # 3. Receive the emission factors for the given subcategories
+    emission_factors = dict(
+        db.execute(
+            select(Categories.subcategory_name, Categories.emission_factor).where(
+                Categories.subcategory_name.in_(form.subcategory_id)
+            )
+        ).all()
+    )
+    for i, sub in enumerate(form.subcategory_id, start=1):
+        if sub not in emission_factors:
+            raise HTTPException(422, f"Entry {i}: no emission factor configured for {sub}.")
+
+    # 4. Save the submission and all its items in one go
     submission_id = (db.scalar(select(func.max(MonthlySpendSubmissions.submission_id))) or 0) + 1
     now = datetime.now(timezone.utc)
 
@@ -78,12 +90,13 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
             category=CATEGORY_OF[sub],
             subcategory=sub,
             amount=round(amount, 2),
+            carbon_impact=round(amount, 2) * emission_factors[sub],
             date_submitted=now,
         )
         for sub, amount in zip(form.subcategory_id, form.amount)
     ]
 
-    # 4. all savec or none do
+    # 5. all saved or none do
     db.add_all(rows)
     db.commit()
 

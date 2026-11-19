@@ -12,6 +12,7 @@ class MonthlySpendSubmissions(Base):
     category = Column(String, nullable=False)
     subcategory = Column(String, nullable=False)
     amount = Column(Float, nullable=False)
+    carbon_impact = Column(Float, nullable=False)
     notes = Column(String, nullable=True)
     date_submitted = Column(DateTime, nullable=False)
 

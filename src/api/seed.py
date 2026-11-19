@@ -80,7 +80,8 @@ with SessionLocal() as db:
             MonthlySpendSubmissions(
                 submission_id=sid, customer_id=cid, month=month,
                 category=cat, subcategory=sub, notes=notes, amount=amount,
-                carbon_impact=amount * emission_factors[sub], date_submitted=now,
+                carbon_impact=((float(amount)*100)*(emission_factors[sub]*1000))/100000, date_submitted=now,
+                #carbon_impact=amount*emission_factor but avoids floating point rounding errors
             )
             for sid, cid, month, cat, sub, notes, amount in SENDSUBMISSIONSSEED
         )

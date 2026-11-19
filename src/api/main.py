@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 from typing import Annotated
 
@@ -41,7 +42,7 @@ class SpendingForm(BaseModel):
     month: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$", description="YYYY-MM")
     customer_id: int = Field(default=1, ge=1, description="placeholder for now, until we have a login system") # futureproofing
     subcategory_id: list[str] = Field(min_length=1, max_length=50)
-    amount: list[Annotated[float, Field(gt=0, le=100_000)]] = Field(min_length=1, max_length=50)
+    amount: list[Annotated[Decimal, Field(gt=0, le=1_000_000_000, decimal_places=2)]] = Field(min_length=1, max_length=50)
 
 
 @app.get("/categories")
@@ -89,8 +90,8 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
             month=form.month,
             category=CATEGORY_OF[sub],
             subcategory=sub,
-            amount=round(amount, 2),
-            carbon_impact=round(amount, 2) * emission_factors[sub],
+            amount=float(amount),
+            carbon_impact=((float(amount)*100)*(emission_factors[sub]*1000))/100000, #amount*emission_factor but avoids floating point rounding errors
             date_submitted=now,
         )
         for sub, amount in zip(form.subcategory_id, form.amount)

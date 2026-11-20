@@ -31,7 +31,6 @@ jobs:
   codeql:
     name: CodeQL
     runs-on: ubuntu-latest
-    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     permissions: 
       contents: read
       security-events: write
@@ -86,7 +85,6 @@ jobs:
     name: DAST (OWASP ZAP)
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

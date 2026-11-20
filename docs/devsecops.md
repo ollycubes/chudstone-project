@@ -19,7 +19,7 @@ Our pipeline is in `.github/workflows/devsecops.yml` and runs on GitHub Actions.
 
 - **Tool:** GitHub CodeQL, using the `security-extended` set of checks
 - **What it scans:** all our Python code. The `tests` folder is skipped
-- **When:** on PRs and on pushes to `main` (not on every feature branch push, to save time)
+- **When:** every push to any branch, and every PR into `main`
 - **Findings:** show up in the repo under **Security > Code scanning**. Each one has a severity of Critical, High, Medium, Low or Note
 - **Blocking:** CodeQL failing to run fails the pipeline. We should also set the branch protection on `main` so that High or Critical findings block the PR from merging
 
@@ -50,7 +50,7 @@ To fix it you'd bump the version in `requirements.txt` to the fix version.
 - **Tool:** OWASP ZAP API scan (`zaproxy/action-api-scan`)
 - **How it works:** the job seeds a fresh database, starts the real API with uvicorn, then ZAP reads our OpenAPI spec (`/openapi.json`) and attacks every endpoint in it
 - **What it tests:** invalid input, unexpected parameters, malformed requests, error handling, exposed technical errors (e.g. stack traces) and common attacks like SQL injection and XSS
-- **When:** on PRs and on pushes to `main` (same as CodeQL, because it takes a few minutes)
+- **When:** every push to any branch, and every PR into `main` (takes a few minutes)
 - **Findings:** ZAP gives each alert a risk level of High, Medium, Low or Informational. The full report (HTML, Markdown and JSON) is in the `dast-report` artifact, and the API's own log is in `dast-api-log`
 - **Blocking:** only the High risk attacks listed in `.zap/rules.tsv` fail the job (SQL injection, XSS, command injection, path traversal etc.). Everything else is reported but doesn't block. To make another rule block, add its ID to that file with `FAIL`
 

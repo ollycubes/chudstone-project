@@ -20,7 +20,7 @@ CATEGORIES: dict[str, list[str]] = {
     "Utilities": ["Heating", "Electricity", "Water"],
 }
 
-CATEGORY_OF = {sub: cat for cat, subs in CATEGORIES.items() for sub in subs}
+CATEGORY_OF = {sub: cat for cat, subs in CATEGORIES.items() for sub in subs} # Would this not cause an issue if we ended up with two subcategories that went by the same name, such as "Other"?
 
 # the html/css/js lives in "Website dir" at the repo root; the API serves it so
 # the page and the API share one origin (no CORS needed)
@@ -50,10 +50,22 @@ def categories() -> dict[str, list[str]]:
     # the form builds its dropdowns from this, so front and back always agree
     return CATEGORIES
 
+@app.get("/totals")
+def totals(month: str | None = None, db: Session = Depends(get_db)) -> list[dict]:
+    rows = category_totals(db, customer_id=1, month=month)
+    return [
+        {"category": rows.category, "spend": round(rows.spend, 2), "carbon": round(rows.carbon, 2)}
+        for rows in rows
+    ]
+
 
 @app.get("/", include_in_schema=False)
 def home() -> RedirectResponse:
     return RedirectResponse("/spending-form/form.html")
+
+@app.get("/dashboard", include_in_schema=False)
+def dashboard() -> RedirectResponse:
+    return RedirectResponse("/dashboard/test-example.html")
 
 
 @app.post("/submit", status_code=201)
@@ -128,6 +140,26 @@ def get_submission(submission_id: int, db: Session = Depends(get_db)) -> dict:
             for r in rows
         ],
     }
+
+
+def category_totals(db: Session, customer_id: int, month: str | None = None):
+    M = MonthlySpendSubmissions
+    stmt = (
+        select(
+            M.category,
+            func.sum(M.amount).label("spend"),        
+            func.sum(M.carbon_impact).label("carbon"),
+        )
+        .where(M.customer_id == customer_id)
+        .group_by(M.category)                          
+        .order_by(func.sum(M.carbon_impact).desc())     
+    )
+    if month:
+        stmt = stmt.where(M.month == month)
+
+    return db.execute(stmt).all()
+
+# {"category": "Travel", "subcategory": "Self-owned car", "amount": 280, "carbon_impact": 53.76}, 
 
 # keep this last: anything not matched by an API route above falls through to the website files
 app.mount("/", StaticFiles(directory=WEBSITE_DIR, html=True), name="website")

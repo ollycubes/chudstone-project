@@ -65,7 +65,7 @@ def home() -> RedirectResponse:
 
 @app.get("/dashboard", include_in_schema=False)
 def dashboard() -> RedirectResponse:
-    return RedirectResponse("/dashboard/dashboard.html")
+    return RedirectResponse("/dashboard/test-example.html")
 
 
 @app.post("/submit", status_code=201)
@@ -131,10 +131,9 @@ def category_totals(db: Session, customer_id: int, month: str | None = None):
     if month:
         stmt = stmt.where(M.month == month)
 
-    # e.g. of JSON shape with values -> Version containing subcategories in the JSON form too
-
     return db.execute(stmt).all()
 
+# {"category": "Travel", "subcategory": "Self-owned car", "amount": 280, "carbon_impact": 53.76}, 
 
 # keep this last: anything not matched by an API route above falls through to the website files
 app.mount("/", StaticFiles(directory=WEBSITE_DIR, html=True), name="website")

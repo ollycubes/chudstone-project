@@ -23,15 +23,45 @@ Our pipeline is in `.github/workflows/devsecops.yml` and runs on GitHub Actions.
 - **Findings:** show up in the repo under **Security > Code scanning**. Each one has a severity of Critical, High, Medium, Low or Note
 - **Blocking:** CodeQL failing to run fails the pipeline. We should also set the branch protection on `main` so that High or Critical findings block the PR from merging
 
+### 3. SCA: pip-audit [X]
+
+- **Tool:** `pip-audit`, which checks our packages against the PyPI and OSV vulnerability databases
+- **What it scans:** every package pinned in `requirements.txt` (and the packages they depend on)
+- **When:** every push, after the build passes
+- **Findings:** a table in the run summary (and the `sca-report` artifact) with:
+  - Name (the dependency)
+  - Version
+  - ID (the vulnerability, e.g. `PYSEC-2021-66`). Click it to see the severity on osv.dev
+  - Fix Versions (what to upgrade to, this is the remediation)
+  - Description
+- **Blocking:** any known vulnerability fails the job
+
+Example of what a finding looks like (from testing with an old `jinja2==2.10`):
+
+```
+Name   | Version | ID             | Fix Versions | Description
+jinja2 | 2.10    | PYSEC-2019-217 | 2.10.1       | In Pallets Jinja before 2.10.1, str.format_map allows a sandbox escape.
+```
+
+To fix it you'd bump the version in `requirements.txt` to the fix version.
+
+### 4. DAST: OWASP ZAP [X]
+
+- **Tool:** OWASP ZAP API scan (`zaproxy/action-api-scan`)
+- **How it works:** the job seeds a fresh database, starts the real API with uvicorn, then ZAP reads our OpenAPI spec (`/openapi.json`) and attacks every endpoint in it
+- **What it tests:** invalid input, unexpected parameters, malformed requests, error handling, exposed technical errors (e.g. stack traces) and common attacks like SQL injection and XSS
+- **When:** on PRs and on pushes to `main` (same as CodeQL, because it takes a few minutes)
+- **Findings:** ZAP gives each alert a risk level of High, Medium, Low or Informational. The full report (HTML, Markdown and JSON) is in the `dast-report` artifact, and the API's own log is in `dast-api-log`
+- **Blocking:** only the High risk attacks listed in `.zap/rules.tsv` fail the job (SQL injection, XSS, command injection, path traversal etc.). Everything else is reported but doesn't block. To make another rule block, add its ID to that file with `FAIL`
+
 ## Still to do
 
 | Step | Plan |
 |---|---|
 | Unit tests | Add a `pytest` step. The API tests go in `api_tests/` (currently empty) |
-| SCA | Add `pip-audit -r requirements.txt`. It lists any dependency + version with a known vulnerability, its ID and the fixed version to upgrade to. `pip-audit` is already in `requirements-dev.txt` |
-| Extra SAST | Add `bandit -r src`. Also already in `requirements-dev.txt` |
-| DAST | Start the API in the pipeline with uvicorn, then run an OWASP ZAP API scan against it. Test bad input, extra parameters, broken requests and check no stack traces get shown |
-| Evidence | Plant a known issue (e.g. a hardcoded password or SQL built from a string), screenshot the finding, fix it, screenshot the clean run. Save these in `docs/evidence/` |
+| Extra SAST | Add `bandit -r src`. Already in `requirements-dev.txt` |
+| DAST on `/calculate` | Once `POST /calculate` exists it gets scanned automatically, since ZAP scans everything in the OpenAPI spec |
+| Evidence | Plant a known issue, screenshot the finding, fix it, screenshot the clean run. Save these in `docs/evidence/`. Easy one for SCA: pin `jinja2==2.10` in `requirements.txt` on a branch |
 
 ## What should block a merge
 
@@ -41,9 +71,9 @@ Our pipeline is in `.github/workflows/devsecops.yml` and runs on GitHub Actions.
 | Unit tests fail | Yes |
 | CodeQL / Bandit High or Critical | Yes |
 | CodeQL / Bandit Medium or Low | No, but make an issue for it |
-| pip-audit finds a vulnerability | Yes, unless there's no fix available yet (then make an issue) |
-| ZAP High | Yes |
-| ZAP Medium / Low | No, but make an issue for it |
+| pip-audit finds a vulnerability | Yes. If there's no fix available yet, make an issue for it |
+| ZAP High (rules in `.zap/rules.tsv`) | Yes |
+| ZAP Medium / Low / Informational | No, but make an issue for it |
 
 ## Security basics we follow
 

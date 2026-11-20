@@ -1,5 +1,33 @@
 ### chudstone-project
-NBS capstone project
+NBS capstone project. A carbon footprint and savings advisor: you enter your monthly spending and it shows the carbon impact.
+
+## Tech we're using
+
+- **Backend:** Python 3.14 with FastAPI (we picked Python over C#)
+- **Database:** SQLite with SQLAlchemy (T-SQL files still to do)
+- **Frontend:** HTML, CSS, JavaScript and Bootstrap, served by the API
+- **Pipeline:** GitHub Actions with CodeQL for security scanning
+
+## Quick start
+
+```
+pip install -r requirements-dev.txt
+cd src
+python -m api.seed
+uvicorn api.main:app --reload
+```
+
+Then go to http://localhost:8000. Full steps are in the [runbook](infra/README.md).
+
+## Docs
+
+- [Runbook](infra/README.md): how to set up and run everything
+- [API contract](docs/api.md): endpoints, requests, responses and status codes
+- [DevSecOps](docs/devsecops.md): what the pipeline does and what blocks a merge
+- [Backlog](docs/backlog.md)
+- [Definition of Ready](docs/DoR.md) / [Definition of Done](docs/DoD.md)
+- [Sprint 1 reflection](docs/sprint1-reflection.md)
+- [Data dictionary](src/api/data%20dictionary.csv)
 
 ---
 

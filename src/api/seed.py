@@ -25,11 +25,12 @@ SENDSUBMISSIONSSEED = [
 ]
 
 CUSTOMERSSEED = [
-    (1, "Single Professional"),
-    (2, "Family Household"),
-    (3, "Student"),
-    (4, "Retired Couple"),
-    (5, "High Commuter"),
+    (1, "Default"),
+    (2, "Single Professional"),
+    (3, "Family Household"),
+    (4, "Student"),
+    (5, "Retired Couple"),
+    (6, "High Commuter"),
 ]
 
 CATEGORIESSEED = [

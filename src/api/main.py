@@ -48,7 +48,13 @@ def categories(db: Session = Depends(get_db)) -> dict[str, list[str]]:
         result.setdefault(cat, []).append(sub)
     return result
 
-
+@app.get("/personas")
+def personas(db: Session = Depends(get_db)) -> list[dict]:
+    # the form's persona dropdown is filled from the customers table
+    return [
+        {"customerId": c.customer_id, "persona": c.persona}
+        for c in db.scalars(select(Customers).order_by(Customers.customer_id))
+    ]
 
 @app.get("/totals")
 def totals(month: str | None = None, db: Session = Depends(get_db)) -> list[dict]:

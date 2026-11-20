@@ -103,5 +103,31 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
 
     return {"status": "saved", "submissionId": submission_id, "entries": len(rows)}
 
+@app.get("/submissions/{submission_id}")
+def get_submission(submission_id: int, db: Session = Depends(get_db)) -> dict:
+    rows = db.scalars(
+        select(MonthlySpendSubmissions)
+        .where(MonthlySpendSubmissions.submission_id == submission_id)
+        .order_by(MonthlySpendSubmissions.entry_id)
+    ).all()
+    if not rows:
+        raise HTTPException(404, "Submission not found.")
+
+    return {
+        "submissionId": submission_id,
+        "month": rows[0].month,
+        "totalSpend": round(sum(r.amount for r in rows), 2),
+        "totalCarbonKg": round(sum(r.carbon_impact for r in rows), 2),
+        "entries": [
+            {
+                "category": r.category,
+                "subcategory": r.subcategory,
+                "amount": r.amount,
+                "carbonKg": round(r.carbon_impact, 2),
+            }
+            for r in rows
+        ],
+    }
+
 # keep this last: anything not matched by an API route above falls through to the website files
 app.mount("/", StaticFiles(directory=WEBSITE_DIR, html=True), name="website")

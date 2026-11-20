@@ -52,9 +52,8 @@ CATEGORIESSEED = [
     ("Utilities", "Heating", 0.3745),
 ]
 
-Base.metadata.create_all(bind=engine)  # create the tables if they don't exist
-
-with SessionLocal() as db:
+def seed(db):
+    """Fill any empty tables with the sample data. Tables that already have data are left alone."""
     if db.query(Categories).first():
         print("Database already seeded with categories")
     else:
@@ -96,3 +95,9 @@ with SessionLocal() as db:
         db.add_all(Customers(customer_id=cid, persona=name) for cid, name in CUSTOMERSSEED)
         db.commit()
         print("db seeded with customers")
+
+
+if __name__ == "__main__":
+    Base.metadata.create_all(bind=engine)  # create the tables if they don't exist
+    with SessionLocal() as db:
+        seed(db)

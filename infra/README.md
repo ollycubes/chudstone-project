@@ -68,6 +68,18 @@ Then open:
 
 **Important:** if you delete and reseed the database while the API is running, stop it (Ctrl+C) and start it again. Otherwise it keeps reading the old deleted file.
 
+## 5. Run the tests
+
+From the project root (not `src`):
+
+```
+pytest tests/api -v
+```
+
+The tests use their own in-memory database, so you don't need to seed anything or have the API running first, and they won't change your `app.db`.
+
+The Playwright frontend tests in `tests/frontend/` are skipped unless Playwright is installed.
+
 ## Configuration
 
 There's nothing to configure yet: no passwords, keys or `.env` file. The database path is set in `src/api/database.py`.

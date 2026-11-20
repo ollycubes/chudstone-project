@@ -33,21 +33,23 @@ CUSTOMERSSEED = [
     (6, "High Commuter"),
 ]
 
+# Factors in kgCO2e per £ spent, based on Defra 2023 household
+# factors and adjusted using ONS CPI for Jan–Oct 2026.
 CATEGORIESSEED = [
-    ("Travel", "Self-owned car", 0.192),
-    ("Travel", "Motorbike", 0.103),
-    ("Travel", "Bus", 0.105),
-    ("Travel", "Train", 0.041),
-    ("Travel", "Subway", 0.285),
-    ("Travel", "Taxi", 0.25),
-    ("Travel", "Carshare", 0.192),
-    ("Travel", "Airplane", 0.103),
-    ("Food", "Groceries", 0.5),
-    ("Food", "Delivery", 0.3),
-    ("Food", "Restaurant/Dine out", 0.4),
-    ("Utilities", "Electricity", 0.233),
-    ("Utilities", "Water", 0.001),
-    ("Utilities", "Heating", 0.2),
+    ("Travel", "Self-owned car", 2.6114),
+    ("Travel", "Motorbike", 2.6114),
+    ("Travel", "Bus", 1.7902),
+    ("Travel", "Train", 1.7902),
+    ("Travel", "Subway", 1.7902),
+    ("Travel", "Taxi", 1.7902),
+    ("Travel", "Carshare", 2.6114),
+    ("Travel", "Airplane", 0.4717),
+    ("Food", "Groceries", 0.6992),
+    ("Food", "Delivery", 0.6140),
+    ("Food", "Restaurant/Dine out", 0.5966),
+    ("Utilities", "Electricity", 1.1960),
+    ("Utilities", "Water", 0.1351),
+    ("Utilities", "Heating", 0.3745),
 ]
 
 Base.metadata.create_all(bind=engine)  # create the tables if they don't exist

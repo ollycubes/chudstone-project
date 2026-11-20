@@ -35,6 +35,8 @@ class SpendingForm(BaseModel):
     customer_id: int = Field(default=1, ge=1, description="the persona picked on the form, until we have a login system")
     subcategory_id: list[str] = Field(min_length=1, max_length=50)
     amount: list[Annotated[Decimal, Field(gt=0, le=1_000_000_000, decimal_places=2)]] = Field(min_length=1, max_length=50)
+    # optional, one per entry (blank if the user didn't write one). Same 200 limit as the form's input box
+    note: list[Annotated[str, Field(max_length=200)]] = Field(default_factory=list, max_length=50)
 
 
 @app.get("/categories")
@@ -79,6 +81,10 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
     # 1. every card needs a type and an amount (notes are optional)
     if len(form.subcategory_id) != len(form.amount):
         raise HTTPException(422, "each entry needs a type and an amount.")
+    # notes can be left out completely, but if they're sent there must be one per entry
+    notes = form.note or [""] * len(form.subcategory_id)
+    if len(notes) != len(form.subcategory_id):
+        raise HTTPException(422, "each entry needs a note (it can be blank).")
 
     # 2. the persona must exist
     if db.get(Customers, form.customer_id) is None:
@@ -109,9 +115,10 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
             subcategory=sub,
             amount=float(amount),
             carbon_impact=((float(amount)*100)*(known[sub][1]*1000))/100000, #amount*emission_factor but avoids floating point rounding errors
+            notes=note.strip() or None,  # blank notes are saved as NULL
             date_submitted=now,
         )
-        for sub, amount in zip(form.subcategory_id, form.amount)
+        for sub, amount, note in zip(form.subcategory_id, form.amount, notes)
     ]
 
     # 5. all saved or none do
@@ -141,6 +148,7 @@ def get_submission(submission_id: int, db: Session = Depends(get_db)) -> dict:
                 "subcategory": r.subcategory,
                 "amount": r.amount,
                 "carbonKg": round(r.carbon_impact, 2),
+                "note": r.notes,
             }
             for r in rows
         ],

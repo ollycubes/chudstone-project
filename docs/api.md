@@ -24,16 +24,17 @@ Sent as **form data** (not JSON) because it comes straight from the HTML form.
 | `customer_id` | int | no (defaults to 1) | Must be 1 or more, and must exist in the `customers` table |
 | `subcategory_id` | string (list) | yes | 1 to 50 items. Each one must exist in the `categories` table, e.g. `Bus` |
 | `amount` | number (list) | yes | 1 to 50 items. More than 0, max 1,000,000,000, max 2 decimal places |
+| `note` | string (list) | no | Max 200 characters each. Can be left out completely, but if it's sent there must be one per expense (blank is fine) |
 
-`subcategory_id` and `amount` are sent once per expense, so the 1st amount goes with the 1st subcategory and so on.
+`subcategory_id`, `amount` and `note` are sent once per expense, so the 1st amount and note go with the 1st subcategory and so on. Blank notes are saved as `NULL`.
 
 Example with curl:
 
 ```
 curl -X POST http://localhost:8000/submit \
   -F month=2026-10 -F customer_id=2 \
-  -F subcategory_id=Bus -F amount=10 \
-  -F subcategory_id=Groceries -F amount=20
+  -F subcategory_id=Bus -F amount=10 -F note="commute to work" \
+  -F subcategory_id=Groceries -F amount=20 -F note=""
 ```
 
 ### Response
@@ -76,8 +77,8 @@ Gets one saved submission back with the carbon worked out. The dashboard uses th
   "totalSpend": 30.0,
   "totalCarbonKg": 11.05,
   "entries": [
-    { "category": "Travel", "subcategory": "Bus", "amount": 10.0, "carbonKg": 1.05 },
-    { "category": "Food", "subcategory": "Groceries", "amount": 20.0, "carbonKg": 10.0 }
+    { "category": "Travel", "subcategory": "Bus", "amount": 10.0, "carbonKg": 1.05, "note": "commute to work" },
+    { "category": "Food", "subcategory": "Groceries", "amount": 20.0, "carbonKg": 10.0, "note": null }
   ]
 }
 ```

@@ -8,6 +8,7 @@ Category,String,N,The category name for the spend (Travel/Food/Utilities)
 Subcategory,String,N,The subcategory (e.g. car/taxi/food delivery)
 Amount,Float,N,How much the customer spent on this subcategory
 CarbonImpact,Float,N,Amount * categories.EmissionFactor
+Notes,String,Y,Optional note the user wrote for this expense (max 200 characters)
 DateSubmitted,DateTime,N,The date and time of the submission
 ,,,
 Customers:,,,

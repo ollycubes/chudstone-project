@@ -176,6 +176,7 @@ document.getElementById("form").addEventListener("submit", async e => {
   filled.forEach(r => {
     body.append("subcategory_id", r.querySelector("[name=expense_type]").value);
     body.append("amount", r.querySelector("[name=amount]").value);
+    body.append("note", r.querySelector("[name=note]").value);   // sent even when blank so notes stay lined up with their expense
   });
 
   const submitBtn = form.querySelector("[type=submit]");

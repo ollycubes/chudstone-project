@@ -95,6 +95,25 @@ main {
   font-size: .7rem;
   font-weight: 500;
 }
+button.pill {          /* the pill doubles as the persona picker */
+  border: 0;
+  color: var(--darkblueink);
+}
+button.pill:hover,
+button.pill:focus-visible { background: var(--white); }
+
+.persona-menu {       /* persona dropdown panel, styled like the month picker */
+  font-size: .8rem;
+  border: 1px solid var(--greygreenline);
+  border-radius: 8px;
+  box-shadow: var(--menu-shadow);
+}
+.persona-menu .dropdown-item.active,
+.persona-menu .dropdown-item:active {
+  background: var(--lightgreen);
+  color: var(--brownink);
+  font-weight: 600;
+}
 
 
 /* ==========================================================================

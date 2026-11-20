@@ -171,6 +171,8 @@ document.getElementById("form").addEventListener("submit", async e => {
 
   const body = new FormData();
   body.append("month", form.month.value);
+  if (customerId === null) return showMsg("danger", "Personas haven't loaded, so this can't be saved yet.");
+  body.append("customer_id", customerId);
   filled.forEach(r => {
     body.append("subcategory_id", r.querySelector("[name=expense_type]").value);
     body.append("amount", r.querySelector("[name=amount]").value);
@@ -190,7 +192,45 @@ document.getElementById("form").addEventListener("submit", async e => {
   }
 });
 
+// persona picker in the header pill, filled from the backend (GET /personas)
+const personaBtn = document.getElementById("persona-btn");
+const personaMenu = document.getElementById("persona-menu");
+let customerId = null;
+
+function setPersona(id, name) {
+  customerId = id;
+  personaBtn.textContent = `Example: ${name}`;
+  document.getElementById("persona-footer").textContent = name;
+  personaMenu.querySelectorAll(".dropdown-item").forEach(b => {
+    const on = +b.dataset.id === id;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-current", on);
+  });
+}
+
+personaMenu.addEventListener("click", e => {
+  const b = e.target.closest(".dropdown-item");
+  if (b) setPersona(+b.dataset.id, b.textContent);
+});
+
+fetch("/personas")
+  .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
+  .then(list => {
+    if (!list.length) throw new Error("no personas");
+    personaMenu.innerHTML = list.map(p =>
+      `<li><button type="button" class="dropdown-item" data-id="${p.customerId}">${p.persona}</button></li>`).join("");
+    setPersona(list[0].customerId, list[0].persona);
+  })
+  .catch(() => {
+    personaBtn.textContent = "Example: unavailable";
+    showMsg("danger", "Could not load personas from the server.");
+  });
+
 fetch("/categories")
   .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
-  .then(data => { TYPES = data; CATS = Object.keys(TYPES); addSection(CATS[0]); })
+  .then(data => {
+    TYPES = data; CATS = Object.keys(TYPES);
+    if (!CATS.length) throw new Error("no categories");
+    addSection(CATS[0]);
+  })
   .catch(() => showMsg("danger", "Could not load spending categories from the server."));

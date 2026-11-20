@@ -13,7 +13,11 @@
 <header class="site-header">
   <div class="container-xl d-flex justify-content-between align-items-center">
     <div class="brand"><b>CAPSTONE</b><small>Your money. More impact.</small></div>
-    <span class="pill">Example: Single Professional</span>
+    <div class="dropdown">
+      <button type="button" id="persona-btn" class="pill dropdown-toggle"
+              data-bs-toggle="dropdown" aria-expanded="false">Example: loading...</button>
+      <ul id="persona-menu" class="dropdown-menu dropdown-menu-end persona-menu"></ul>
+    </div>
   </div>
 </header>
 
@@ -52,7 +56,7 @@
   </form>
 </main>
 
-<footer>Sprint 1 - Monthly spending entry <span class="mx-2">/</span> Example data based on the Single Professional persona</footer>
+<footer>Sprint 1 - Monthly spending entry <span class="mx-2">/</span> Example data based on the <span id="persona-footer">selected</span> persona</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="form.js"></script>

@@ -171,6 +171,7 @@ document.getElementById("form").addEventListener("submit", async e => {
 
   const body = new FormData();
   body.append("month", form.month.value);
+  body.append("customer_id", form.customer_id.value);
   filled.forEach(r => {
     body.append("subcategory_id", r.querySelector("[name=expense_type]").value);
     body.append("amount", r.querySelector("[name=amount]").value);
@@ -190,7 +191,34 @@ document.getElementById("form").addEventListener("submit", async e => {
   }
 });
 
+const personaSelect = document.getElementById("persona");
+
+function showPersona() {
+  const name = personaSelect.selectedOptions[0]?.textContent || "";
+  document.getElementById("persona-pill").textContent = `Example: ${name}`;
+  document.getElementById("persona-footer").textContent = name;
+}
+personaSelect.addEventListener("change", showPersona);
+
+// filled from the backend (GET /personas), i.e. the customers table
+fetch("/personas")
+  .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
+  .then(list => {
+    if (!list.length) throw new Error("no personas");
+    personaSelect.innerHTML = list
+      .map(p => `<option value="${p.customerId}">${p.persona}</option>`).join("");
+    showPersona();
+  })
+  .catch(() => {
+    personaSelect.innerHTML = `<option value="" selected disabled>Could not load personas</option>`;
+    showMsg("danger", "Could not load personas from the server.");
+  });
+
 fetch("/categories")
   .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
-  .then(data => { TYPES = data; CATS = Object.keys(TYPES); addSection(CATS[0]); })
+  .then(data => {
+    TYPES = data; CATS = Object.keys(TYPES);
+    if (!CATS.length) throw new Error("no categories");
+    addSection(CATS[0]);
+  })
   .catch(() => showMsg("danger", "Could not load spending categories from the server."));

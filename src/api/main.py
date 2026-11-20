@@ -12,15 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
-from .models import Categories, MonthlySpendSubmissions
-
-CATEGORIES: dict[str, list[str]] = {
-    "Travel": ["Train", "Bus", "Self-owned car", "Car share", "Taxi", "Plane", "Other"],
-    "Food": ["Delivery", "Restaurant", "Groceries"],
-    "Utilities": ["Heating", "Electricity", "Water"],
-}
-
-CATEGORY_OF = {sub: cat for cat, subs in CATEGORIES.items() for sub in subs} # Would this not cause an issue if we ended up with two subcategories that went by the same name, such as "Other"?
+from .models import Categories, Customers, MonthlySpendSubmissions
 
 # the html/css/js lives in "Website dir" at the repo root; the API serves it so
 # the page and the API share one origin (no CORS needed)
@@ -40,15 +32,23 @@ app = FastAPI(title="Carbon Footprint & Savings Advisor", lifespan=lifespan)
 # and replies 422 (with the reason) if anything doesn't fit.
 class SpendingForm(BaseModel):
     month: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$", description="YYYY-MM")
-    customer_id: int = Field(default=1, ge=1, description="placeholder for now, until we have a login system") # futureproofing
+    customer_id: int = Field(default=1, ge=1, description="the persona picked on the form, until we have a login system")
     subcategory_id: list[str] = Field(min_length=1, max_length=50)
     amount: list[Annotated[Decimal, Field(gt=0, le=1_000_000_000, decimal_places=2)]] = Field(min_length=1, max_length=50)
 
 
 @app.get("/categories")
-def categories() -> dict[str, list[str]]:
-    # the form builds its dropdowns from this, so front and back always agree
-    return CATEGORIES
+def categories(db: Session = Depends(get_db)) -> dict[str, list[str]]:
+    # the form builds its dropdowns from the categories table, so front and back always agree
+    result: dict[str, list[str]] = {}
+    for cat, sub in db.execute(
+        select(Categories.category_name, Categories.subcategory_name)
+        .order_by(Categories.category_name, Categories.subcategory_name)
+    ):
+        result.setdefault(cat, []).append(sub)
+    return result
+
+
 
 @app.get("/totals")
 def totals(month: str | None = None, db: Session = Depends(get_db)) -> list[dict]:
@@ -74,22 +74,21 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
     if len(form.subcategory_id) != len(form.amount):
         raise HTTPException(422, "each entry needs a type and an amount.")
 
-    # 2. each subcategory checked and finds its parent category
-    for i, sub in enumerate(form.subcategory_id, start=1):
-        if sub not in CATEGORY_OF:
-            raise HTTPException(422, f"Entry {i}: unknown type {sub}.")
+    # 2. the persona must exist
+    if db.get(Customers, form.customer_id) is None:
+        raise HTTPException(422, f"Unknown persona {form.customer_id}.")
 
-    # 3. Receive the emission factors for the given subcategories
-    emission_factors = dict(
-        db.execute(
-            select(Categories.subcategory_name, Categories.emission_factor).where(
-                Categories.subcategory_name.in_(form.subcategory_id)
-            )
-        ).all()
-    )
+    # 3. look up each subcategory's parent category and emission factor in the db
+    known = {
+        sub: (cat, factor)
+        for sub, cat, factor in db.execute(
+            select(Categories.subcategory_name, Categories.category_name, Categories.emission_factor)
+            .where(Categories.subcategory_name.in_(form.subcategory_id))
+        )
+    }
     for i, sub in enumerate(form.subcategory_id, start=1):
-        if sub not in emission_factors:
-            raise HTTPException(422, f"Entry {i}: no emission factor configured for {sub}.")
+        if sub not in known:
+            raise HTTPException(422, f"Entry {i}: unknown type {sub}.")
 
     # 4. Save the submission and all its items in one go
     submission_id = (db.scalar(select(func.max(MonthlySpendSubmissions.submission_id))) or 0) + 1
@@ -100,10 +99,10 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
             submission_id=submission_id,
             customer_id=form.customer_id,
             month=form.month,
-            category=CATEGORY_OF[sub],
+            category=known[sub][0],
             subcategory=sub,
             amount=float(amount),
-            carbon_impact=((float(amount)*100)*(emission_factors[sub]*1000))/100000, #amount*emission_factor but avoids floating point rounding errors
+            carbon_impact=((float(amount)*100)*(known[sub][1]*1000))/100000, #amount*emission_factor but avoids floating point rounding errors
             date_submitted=now,
         )
         for sub, amount in zip(form.subcategory_id, form.amount)

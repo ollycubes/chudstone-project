@@ -13,7 +13,7 @@
 <header class="site-header">
   <div class="container-xl d-flex justify-content-between align-items-center">
     <div class="brand"><b>CAPSTONE</b><small>Your money. More impact.</small></div>
-    <span class="pill">Example: Single Professional</span>
+    <span class="pill" id="persona-pill">Example persona</span>
   </div>
 </header>
 
@@ -27,6 +27,11 @@
     <div id="msg" class="alert d-none" role="alert"></div>
     <h2 class="h6 fw-semibold mb-0">Add spending</h2>
     <p class="text-secondary mb-3" style="font-size:.75rem">Required fields are marked <span class="req">*</span></p>
+
+    <label class="form-label" for="persona">Persona <span class="req">*</span></label>
+    <select id="persona" name="customer_id" class="form-select mb-4" required>
+      <option value="" selected disabled>Loading personas...</option>
+    </select>
 
     <label class="form-label" for="month-btn">Spending month <span class="req">*</span></label>
     <div class="dropdown mb-4">
@@ -52,7 +57,7 @@
   </form>
 </main>
 
-<footer>Sprint 1 - Monthly spending entry <span class="mx-2">/</span> Example data based on the Single Professional persona</footer>
+<footer>Sprint 1 - Monthly spending entry <span class="mx-2">/</span> Example data based on the <span id="persona-footer">selected</span> persona</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="form.js"></script>

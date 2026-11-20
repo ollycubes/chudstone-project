@@ -28,6 +28,36 @@ jobs:
       - name: Check the app imports
         run: PYTHONPATH=src python -c "import api.main"
 
+  test:
+    name: Unit tests
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run API tests
+        run: |
+          mkdir -p reports
+          set -o pipefail
+          pytest tests/api -v --junitxml=reports/pytest.xml | tee reports/pytest.txt
+      - name: Add results to the run summary
+        if: always()
+        run: |
+          echo "## Unit test results" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -n 1 reports/pytest.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: unit-test-results
+          path: reports/
+
   codeql:
     name: CodeQL
     runs-on: ubuntu-latest
@@ -51,7 +81,7 @@ jobs:
 
   sca:
     name: SCA (pip-audit)
-    needs: build
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -83,7 +113,7 @@ jobs:
   # Only the rules marked FAIL in .zap/rules.tsv block the pipeline, other alerts are just reported.
   dast:
     name: DAST (OWASP ZAP)
-    needs: build
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -15,7 +15,16 @@ Our pipeline is in `.github/workflows/devsecops.yml` and runs on GitHub Actions.
 - Installs Python 3.14 and everything in `requirements-dev.txt`
 - Checks the app actually imports (`python -c "import api.main"`), so if there's a syntax error or a missing package the build fails
 
-### 2. SAST: CodeQL [X]
+### 2. Unit tests: pytest [X]
+
+- **Tool:** `pytest` with FastAPI's `TestClient`
+- **What it tests:** the API tests in `tests/api/`. Each test gets a fresh in-memory database seeded with the same data as `seed.py`, so nothing touches a real database
+- **When:** every push, after the build passes. SCA and DAST only run if the tests pass
+- **Results:** the pass/fail count is in the run summary, and the full results (`pytest.xml` and `pytest.txt`) are in the `unit-test-results` artifact
+- **Blocking:** any failing test fails the pipeline
+- **Known bugs:** tests marked `xfail` are for bugs we know about but haven't fixed yet. They show as `xfailed` and don't block. Once the bug is fixed the test starts passing, which fails the pipeline (`strict=True`) to remind us to remove the `xfail` mark
+
+### 3. SAST: CodeQL [X]
 
 - **Tool:** GitHub CodeQL, using the `security-extended` set of checks
 - **What it scans:** all our Python code. The `tests` folder is skipped
@@ -23,11 +32,11 @@ Our pipeline is in `.github/workflows/devsecops.yml` and runs on GitHub Actions.
 - **Findings:** show up in the repo under **Security > Code scanning**. Each one has a severity of Critical, High, Medium, Low or Note
 - **Blocking:** CodeQL failing to run fails the pipeline. We should also set the branch protection on `main` so that High or Critical findings block the PR from merging
 
-### 3. SCA: pip-audit [X]
+### 4. SCA: pip-audit [X]
 
 - **Tool:** `pip-audit`, which checks our packages against the PyPI and OSV vulnerability databases
 - **What it scans:** every package pinned in `requirements.txt` (and the packages they depend on)
-- **When:** every push, after the build passes
+- **When:** every push, after the unit tests pass
 - **Findings:** a table in the run summary (and the `sca-report` artifact) with:
   - Name (the dependency)
   - Version
@@ -45,7 +54,7 @@ jinja2 | 2.10    | PYSEC-2019-217 | 2.10.1       | In Pallets Jinja before 2.10.
 
 To fix it you'd bump the version in `requirements.txt` to the fix version.
 
-### 4. DAST: OWASP ZAP [X]
+### 5. DAST: OWASP ZAP [X]
 
 - **Tool:** OWASP ZAP API scan (`zaproxy/action-api-scan`)
 - **How it works:** the job seeds a fresh database, starts the real API with uvicorn, then ZAP reads our OpenAPI spec (`/openapi.json`) and attacks every endpoint in it
@@ -58,7 +67,6 @@ To fix it you'd bump the version in `requirements.txt` to the fix version.
 
 | Step | Plan |
 |---|---|
-| Unit tests | Add a `pytest` step. The API tests go in `api_tests/` (currently empty) |
 | Extra SAST | Add `bandit -r src`. Already in `requirements-dev.txt` |
 | DAST on `/calculate` | Once `POST /calculate` exists it gets scanned automatically, since ZAP scans everything in the OpenAPI spec |
 | Evidence | Plant a known issue, screenshot the finding, fix it, screenshot the clean run. Save these in `docs/evidence/`. Easy one for SCA: pin `jinja2==2.10` in `requirements.txt` on a branch |

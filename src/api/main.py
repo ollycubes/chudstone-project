@@ -4,7 +4,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Form, HTTPException
+from fastapi import Depends, FastAPI, Form, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -59,8 +59,13 @@ def personas(db: Session = Depends(get_db)) -> list[dict]:
     ]
 
 @app.get("/totals")
-def totals(month: str | None = None, db: Session = Depends(get_db)) -> list[dict]:
-    rows = category_totals(db, customer_id=1, month=month)
+def totals(
+    customer_id: Annotated[int, Query(ge=1)] = 1,
+    month: Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")] = None,
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    # the dashboard passes the submission's customer and month to get that persona's breakdown
+    rows = category_totals(db, customer_id=customer_id, month=month)
     return [
         {"category": rows.category, "spend": round(rows.spend, 2), "carbon": round(rows.carbon, 2)}
         for rows in rows
@@ -137,8 +142,11 @@ def get_submission(submission_id: int, db: Session = Depends(get_db)) -> dict:
     if not rows:
         raise HTTPException(404, "Submission not found.")
 
+    customer = db.get(Customers, rows[0].customer_id)
     return {
         "submissionId": submission_id,
+        "customerId": rows[0].customer_id,
+        "persona": customer.persona if customer else None,
         "month": rows[0].month,
         "totalSpend": round(sum(r.amount for r in rows), 2),
         "totalCarbonKg": round(sum(r.carbon_impact for r in rows), 2),

@@ -12,14 +12,14 @@
 <body>
 <header class="site-header">
   <div class="container-xl d-flex justify-content-between align-items-center">
-    <span class="pill">Example: Single Professional</span>
+    <span class="pill" id="persona">Example: ...</span>
   </div>
 </header>
 
 <main class="container-xl">
   <div class="intro">
     <h1>Your dashboard<span id="month-label"></span></h1>
-    <p>Here is what you spent and the estimated carbon it produced.</p>
+    <p>Here is everything you've spent this month and the estimated carbon it produced.</p>
   </div>
 
   <div id="msg" class="alert alert-danger d-none stat-row" role="alert"></div>
@@ -27,21 +27,41 @@
   <div class="row g-3 stat-row">
     <div class="col-12 col-md-6">
       <div class="stat-card">
-        <span class="stat-label">Total spending</span>
+        <span class="stat-label">Total spending this month</span>
         <span class="stat-value" id="total-spend">...</span>
       </div>
     </div>
 
     <div class="col-12 col-md-6">
       <div class="stat-card stat-card-green">
-        <span class="stat-label">Estimated carbon impact</span>
+        <span class="stat-label">Estimated carbon this month</span>
         <span class="stat-value" id="total-carbon">...</span>
       </div>
     </div>
   </div>
 
+  <section class="spend-card stat-row">
+    <h2 class="h6 fw-semibold mb-1">By category</h2>
+    <p class="section-note">All your entries for <span id="totals-month">this month</span>, highest carbon first.</p>
+    <div id="totals-msg" class="text-muted small d-none"></div>
+
+    <div class="table-responsive">
+      <table class="table entries-table align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th class="text-end">Spent</th>
+            <th class="text-end">Carbon (kg CO₂e)</th>
+          </tr>
+        </thead>
+        <tbody id="totals"></tbody>
+      </table>
+    </div>
+  </section>
+
   <section class="spend-card">
-    <h2 class="h6 fw-semibold mb-3">Your entries</h2>
+    <h2 class="h6 fw-semibold mb-1">Just added</h2>
+    <p class="section-note">The entries from this submission: <span id="sub-totals">...</span></p>
 
     <div class="table-responsive">
       <table class="table entries-table align-middle mb-0">

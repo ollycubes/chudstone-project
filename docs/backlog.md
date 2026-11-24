@@ -26,7 +26,7 @@ To do ?
 | `GET /submissions/{id}` for the dashboard | Tanha | X |
 | `GET /categories` and `GET /personas` from the database | Oliver | X |
 | `POST /calculate` endpoint (from the brief) | | ? |
-| `/totals` should use the selected persona, not always customer 1 | | ? |
+| `/totals` should use the selected persona, not always customer 1 | | X |
 | API contract documented (`docs/api.md`) | | X |
 
 ### Database

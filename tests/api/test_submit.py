@@ -51,6 +51,8 @@ def test_saved_submission_can_be_read_back(client):
 
     body = res.json()
     assert body["submissionId"] == sid
+    assert body["customerId"] == 2
+    assert isinstance(body["persona"], str)
     assert body["month"] == "2026-10"
     assert body["totalSpend"] == 30.50
     assert [e["subcategory"] for e in body["entries"]] == ["Bus", "Groceries"]

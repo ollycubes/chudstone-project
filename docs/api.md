@@ -73,6 +73,8 @@ Gets one saved submission back with the carbon worked out. The dashboard uses th
 ```json
 {
   "submissionId": 3,
+  "customerId": 2,
+  "persona": "Single Professional",
   "month": "2026-10",
   "totalSpend": 30.0,
   "totalCarbonKg": 11.05,
@@ -120,9 +122,14 @@ Returns all the personas (customers) from the database. The form uses this for t
 
 ## GET /totals
 
-Spend and carbon added up per category. Optional `?month=YYYY-MM` to filter by month.
+Spend and carbon added up per category for one persona, highest carbon first. The dashboard uses this for its month totals and "By category" table.
 
-> Known issue: this is always for customer 1 at the moment.
+| Query param | Default | |
+|---|---|---|
+| `customer_id` | `1` | the persona to total up |
+| `month` | all months | `YYYY-MM` to filter to one month |
+
+**422** if `customer_id` isn't a positive whole number or `month` isn't `YYYY-MM`.
 
 **200 OK**
 

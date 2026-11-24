@@ -12,7 +12,7 @@ All examples assume the API is running on `http://localhost:8000`.
 
 Saves one month of spending for a persona and works out the carbon for each item.
 
-> Note: the sprint brief asks for `POST /calculate`. We haven't added that yet, `/submit` is the endpoint that does the calculating right now. See the backlog.
+> Note: the sprint brief asks for `POST /calculate`. We decided to use `/submit` instead, since it already works out the carbon for each item. See the scope decisions in the README.
 
 ### Request
 

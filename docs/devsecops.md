@@ -68,7 +68,6 @@ To fix it you'd bump the version in `requirements.txt` to the fix version.
 | Step | Plan |
 |---|---|
 | Extra SAST | Add `bandit -r src`. Already in `requirements-dev.txt` |
-| DAST on `/calculate` | Once `POST /calculate` exists it gets scanned automatically, since ZAP scans everything in the OpenAPI spec |
 | Evidence | Plant a known issue, screenshot the finding, fix it, screenshot the clean run. Save these in `docs/evidence/`. Easy one for SCA: pin `jinja2==2.10` in `requirements.txt` on a branch |
 
 ## What should block a merge

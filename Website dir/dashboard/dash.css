@@ -48,3 +48,8 @@
 a.btn-next {
   text-decoration: none;
 }
+.section-note {
+  font-size: .8rem;
+  color: var(--brownink);
+  margin-bottom: .75rem;
+}

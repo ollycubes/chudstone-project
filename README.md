@@ -10,12 +10,15 @@ NBS capstone project. A carbon footprint and savings advisor: you enter your mon
 
 ## Quick start
 
+Run these from the repo root:
+
 ```
 pip install -r requirements-dev.txt
-cd src
-python -m api.seed
-uvicorn api.main:app --reload
+PYTHONPATH=src python -m api.seed
+uvicorn api.main:app --app-dir src --reload
 ```
+
+`--app-dir src` is needed because the `api` package lives in `src/`. Without it you get `ModuleNotFoundError: No module named 'api'`.
 
 Then go to http://localhost:8000. Full steps are in the [runbook](infra/README.md).
 

@@ -6,7 +6,7 @@ A task is "done" when:
 - [ ] Code is on its own branch, named using our conventions (`feat/`, `fix/`, `docs/`, `chore/`)
 - [ ] A PR has been opened using the PR template
 - [ ] At least one other person has reviewed and approved it (you can't approve your own)
-- [ ] The DevSecOps pipeline passes (build + CodeQL)
+- [ ] The DevSecOps pipeline passes (build, unit tests, CodeQL, pip-audit and ZAP)
 - [ ] It's been tested locally and works
 - [ ] No secrets, `.env` files, `.db` files or real customer data are committed
 - [ ] Any new dependencies are pinned in `requirements.txt`

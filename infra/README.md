@@ -88,5 +88,4 @@ When we add secrets later they'll go in a `.env` file (already in `.gitignore`) 
 
 ## Still to do
 
-- T-SQL files in `infra/sql/` (`schema.sql` and `seed.sql`), as the brief asks for
 - Terraform is a stretch goal

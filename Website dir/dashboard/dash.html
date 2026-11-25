@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -12,78 +13,170 @@
 <body>
 <header class="site-header">
   <div class="container-xl d-flex justify-content-between align-items-center">
-    <span class="pill" id="persona">Example: ...</span>
+    <div class="brand"><b>CAPSTONE</b><small>Your money. More impact.</small></div>
+    <div class="dropdown">
+      <button type="button" id="persona-btn" class="pill dropdown-toggle"
+              data-bs-toggle="dropdown" aria-expanded="false">Example: loading...</button>
+      <ul id="persona-menu" class="dropdown-menu dropdown-menu-end persona-menu"></ul>
+    </div>
   </div>
 </header>
 
 <main class="container-xl">
-  <div class="intro">
-    <h1>Your dashboard<span id="month-label"></span></h1>
-    <p>Here is everything you've spent this month and the estimated carbon it produced.</p>
+  <div class="dash">
+    <div class="intro">
+      <h1>Your dashboard</h1>
+      <p>See how your spending affects the planet, and where you could save.</p>
+    </div>
+
+    <div id="msg" class="alert alert-danger d-none" role="alert"></div>
+
+    <div class="dash-grid">
+      <!-- Chart -->
+      <section class="panel chart-card" aria-labelledby="chart-title">
+        <div class="chart-head">
+          <div>
+            <h2 id="chart-title" class="chart-title">Spending overview</h2>
+            <div class="view-toggle" role="group" aria-label="Chart view">
+              <button type="button" class="view-btn active" data-view="spend" aria-pressed="true">Spending</button>
+              <button type="button" class="view-btn" data-view="carbon" aria-pressed="false">Carbon</button>
+            </div>
+          </div>
+          <ul class="legend" id="legend" aria-label="Categories"></ul>
+        </div>
+
+        <div class="chart" id="chart">
+          <div class="chart-ylabel" id="chart-ylabel"></div>
+          <div class="chart-plot">
+            <div class="chart-grid" id="chart-grid" aria-hidden="true"></div>
+            <div class="chart-bars" id="chart-bars" role="list"></div>
+          </div>
+        </div>
+        <div class="chart-empty d-none" id="chart-empty">
+          No spending yet. Add a month to see your chart.
+        </div>
+        <div class="chart-tip" id="chart-tip" role="status" aria-live="polite" hidden></div>
+        <p class="visually-hidden" id="chart-summary"></p>
+      </section>
+
+      <!-- Month overview -->
+      <aside class="panel month-card" aria-label="Monthly overview">
+        <div class="month-nav">
+          <button type="button" class="nav-arrow" id="month-prev" aria-label="Previous month">&#9664;</button>
+          <h2 class="month-title" id="month-title">&nbsp;</h2>
+          <button type="button" class="nav-arrow" id="month-next" aria-label="Next month">&#9654;</button>
+        </div>
+
+        <div class="mini-card">
+          <span class="mini-label">Total spending</span>
+          <span class="mini-value" id="total-spend">–</span>
+          <span class="mini-delta" id="spend-delta"></span>
+          <span class="mini-sub" id="entry-count"></span>
+        </div>
+
+        <div class="mini-card">
+          <span class="mini-label">Estimated carbon footprint</span>
+          <span class="mini-value" id="total-carbon">–</span>
+          <span class="mini-delta" id="carbon-delta"></span>
+        </div>
+
+        <div class="side-actions">
+          <a href="/spending-form/form.html" class="btn btn-next" id="add-link">Add spending</a>
+          <button type="button" class="btn btn-next" id="edit-btn" data-bs-toggle="modal" data-bs-target="#entries-modal">View &amp; edit spending</button>
+          <a href="/recommendations/recommendations.html" class="btn btn-next" id="save-link">Ways to save</a>
+        </div>
+      </aside>
+
+      <!-- Insights -->
+      <section class="panel insights" aria-label="Insights for the selected month">
+        <div class="insight-card">
+          <span class="mini-label">Largest spending</span>
+          <span class="insight-value" id="top-spend">–</span>
+          <span class="mini-sub" id="top-spend-sub"></span>
+          <a class="insight-link" href="/recommendations/recommendations.html">See how to reduce this</a>
+        </div>
+        <div class="insight-card">
+          <span class="mini-label">Largest carbon footprint</span>
+          <span class="insight-value" id="top-carbon">–</span>
+          <span class="mini-sub" id="top-carbon-sub"></span>
+          <a class="insight-link" href="/recommendations/recommendations.html">See how to reduce this</a>
+        </div>
+        <div class="insight-card">
+          <span class="mini-label">You could save up to</span>
+          <span class="insight-value insight-ink" id="save-value">–</span>
+          <span class="mini-sub" id="save-sub"></span>
+          <a class="insight-link" href="/recommendations/recommendations.html">See how to achieve this</a>
+        </div>
+      </section>
+    </div>
   </div>
-
-  <div id="msg" class="alert alert-danger d-none stat-row" role="alert"></div>
-
-  <div class="row g-3 stat-row">
-    <div class="col-12 col-md-6">
-      <div class="stat-card">
-        <span class="stat-label">Total spending this month</span>
-        <span class="stat-value" id="total-spend">...</span>
-      </div>
-    </div>
-
-    <div class="col-12 col-md-6">
-      <div class="stat-card stat-card-green">
-        <span class="stat-label">Estimated carbon this month</span>
-        <span class="stat-value" id="total-carbon">...</span>
-      </div>
-    </div>
-  </div>
-
-  <section class="spend-card stat-row">
-    <h2 class="h6 fw-semibold mb-1">By category</h2>
-    <p class="section-note">All your entries for <span id="totals-month">this month</span>, highest carbon first.</p>
-    <div id="totals-msg" class="text-muted small d-none"></div>
-
-    <div class="table-responsive">
-      <table class="table entries-table align-middle mb-0">
-        <thead>
-          <tr>
-            <th>Category</th>
-            <th class="text-end">Spent</th>
-            <th class="text-end">Carbon (kg CO₂e)</th>
-          </tr>
-        </thead>
-        <tbody id="totals"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <section class="spend-card">
-    <h2 class="h6 fw-semibold mb-1">Just added</h2>
-    <p class="section-note">The entries from this submission: <span id="sub-totals">...</span></p>
-
-    <div class="table-responsive">
-      <table class="table entries-table align-middle mb-0">
-        <thead>
-          <tr>
-            <th>Category</th>
-            <th>Type</th>
-            <th class="text-end">Spent</th>
-            <th class="text-end">Carbon (kg CO₂e)</th>
-          </tr>
-        </thead>
-        <tbody id="entries"></tbody>
-      </table>
-    </div>
-
-    <div class="actions">
-      <a href="/spending-form/form.html" class="btn btn-next">Add another month</a>
-    </div>
-  </section>
 </main>
 
-<footer>Sprint 2 - Dashboard</footer>
+<footer class="dash-footer">Sprint 2 - Dashboard <span class="mx-2">/</span> Example data based on the <span id="persona-footer">selected</span> persona</footer>
+
+<!-- View & edit spending -->
+<div class="modal fade" id="entries-modal" tabindex="-1" aria-labelledby="entries-title" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content entries-modal">
+      <div class="modal-header">
+        <h2 class="modal-title h6 fw-semibold" id="entries-title">View &amp; edit spending</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-msg" class="alert d-none" role="alert"></div>
+
+        <!-- list view -->
+        <div id="entries-list">
+          <label class="form-label" for="entries-month">Month</label>
+          <select id="entries-month" class="form-select mb-3"></select>
+          <div class="table-responsive">
+            <table class="table entries-table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Type</th>
+                  <th class="text-end">Spent</th>
+                  <th class="text-end">kg CO₂e</th>
+                  <th><span class="visually-hidden">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody id="entries-body"></tbody>
+            </table>
+          </div>
+          <p class="section-note mt-3 mb-0 d-none" id="entries-empty">No entries for this month.</p>
+        </div>
+
+        <!-- detail / edit view -->
+        <form id="entry-form" class="d-none" novalidate>
+          <input type="hidden" id="entry-id">
+          <p class="section-note" id="entry-context"></p>
+          <div class="row gx-3 gy-2">
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="entry-type">Type <span class="req">*</span></label>
+              <select id="entry-type" class="form-select" required></select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="entry-amount">Amount spent <span class="req">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text">£</span>
+                <input type="number" id="entry-amount" class="form-control" step="0.01" min="0.01" required>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="entry-note">Note (optional)</label>
+              <input type="text" id="entry-note" class="form-control" maxlength="200" placeholder="Add note">
+            </div>
+          </div>
+          <p class="section-note mt-3 mb-0" id="entry-carbon"></p>
+          <div class="actions">
+            <button type="button" class="btn btn-back" id="entry-cancel">Back to list</button>
+            <button type="submit" class="btn btn-confirm" id="entry-save">Save changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/dashboard/dash.js"></script>

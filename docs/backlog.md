@@ -25,7 +25,7 @@ To do ?
 | `POST /submit` saves spending and works out carbon | Oliver | X |
 | `GET /submissions/{id}` for the dashboard | Tanha | X |
 | `GET /categories` and `GET /personas` from the database | Oliver | X |
-| `POST /calculate` endpoint (from the brief) | | ? |
+| `POST /calculate` endpoint (from the brief) | | Descoped, `/submit` does the calculating |
 | `/totals` should use the selected persona, not always customer 1 | | X |
 | API contract documented (`docs/api.md`) | | X |
 
@@ -37,8 +37,8 @@ To do ?
 | Seed Travel, Food and Utilities data | DamoDB | X |
 | Add emission factors to the categories table | DamoDB | X |
 | Personas seeded into `customers` | numgum | X |
-| `infra/sql/schema.sql` and `seed.sql` in T-SQL | | ? |
-| `EmissionsFactors` table with source, version and effective date | | ? |
+| `infra/sql/schema.sql` and `seed.sql` in T-SQL | | Descoped, we use SQLite |
+| `EmissionsFactors` table with source, version and effective date | | Descoped, factors live on `categories` |
 | `Assumptions` table | | ? |
 
 ### Frontend
@@ -63,7 +63,7 @@ To do ?
 | Unit tests for the API with pytest, run in the pipeline | Oliver | X |
 | SCA with `pip-audit` in the pipeline | Oliver | X |
 | Bandit in the pipeline | | ? |
-| DAST against the running API (OWASP ZAP) | Oliver | O (needs its first run on a PR) |
+| DAST against the running API (OWASP ZAP) | Oliver | X |
 | Deliberate security finding + fix as evidence | | ? |
 
 ### Docs

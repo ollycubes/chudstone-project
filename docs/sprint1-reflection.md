@@ -6,7 +6,8 @@
 - A SQLite database seeded with Travel, Food and Utilities categories, emission factors and personas
 - A spending form that loads its categories and personas from the database
 - A dashboard that shows the results of a submission
-- A GitHub Actions pipeline with a build step and CodeQL scanning
+- A GitHub Actions pipeline with build, unit tests (pytest), SAST (CodeQL), SCA (pip-audit) and DAST (OWASP ZAP against the running API)
+- API unit tests that run in the pipeline on every push
 - Branch rules, PR/issue templates, DoR and DoD
 
 ## What went well
@@ -19,8 +20,7 @@
 
 - A PR (#24) accidentally removed the form's POST to the backend and we had to revert it (#25)
 - Categories were hardcoded in two places (frontend and backend) and got out of sync with the database, so some options failed when submitted. Fixed by loading them from the database
-- We focused on the app and fell behind on the DevSecOps parts: no unit tests, SCA or DAST in the pipeline yet
-- We used SQLite instead of T-SQL, so the `infra/sql` files aren't done
+- We focused on the app first and left the DevSecOps parts (unit tests, SCA and DAST) until late in the sprint. They're in now, but it was a rush
 
 ## What we'll do differently
 
@@ -30,10 +30,8 @@
 
 ## Carry over to Sprint 2
 
-- `POST /calculate`
-- Unit tests, SCA, Bandit and DAST in the pipeline
-- T-SQL schema and seed, `EmissionsFactors` and `Assumptions` tables
-- `/totals` to use the selected persona
+- `Assumptions` table
+- Bandit in the pipeline
 - Update Playwright tests for the new form
 
 ## Sign-off

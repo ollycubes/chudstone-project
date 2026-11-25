@@ -4,9 +4,9 @@ NBS capstone project. A carbon footprint and savings advisor: you enter your mon
 ## Tech we're using
 
 - **Backend:** Python 3.14 with FastAPI (we picked Python over C#)
-- **Database:** SQLite with SQLAlchemy (T-SQL files still to do)
+- **Database:** SQLite with SQLAlchemy (we chose this over T-SQL, see [scope decisions](#sprint-1-scope-decisions))
 - **Frontend:** HTML, CSS, JavaScript and Bootstrap, served by the API
-- **Pipeline:** GitHub Actions with CodeQL for security scanning
+- **Pipeline:** GitHub Actions: build, unit tests (pytest), SAST (CodeQL), SCA (pip-audit) and DAST (OWASP ZAP)
 
 ## Quick start
 
@@ -31,6 +31,16 @@ Then go to http://localhost:8000. Full steps are in the [runbook](infra/README.m
 - [Definition of Ready](docs/DoR.md) / [Definition of Done](docs/DoD.md)
 - [Sprint 1 reflection](docs/sprint1-reflection.md)
 - [Data dictionary](src/api/data%20dictionary.csv)
+
+## Sprint 1 scope decisions
+
+Where we've deliberately differed from the brief:
+
+| Brief asks for | What we did | Why |
+|---|---|---|
+| `POST /calculate` | `POST /submit` | `/submit` takes the spending, works out the carbon for each item and saves it, so it does the job `/calculate` was meant to do. See the [API contract](docs/api.md) |
+| T-SQL `infra/sql/schema.sql` and `seed.sql` | SQLite with SQLAlchemy models (`src/api/models.py`) and a seed script (`src/api/seed.py`) | No database server needed, so everyone can run it locally and the pipeline can seed a fresh database every run |
+| Separate `EmissionsFactors` table | Emission factors are a column on `categories` | Each subcategory has one factor, so a separate table wasn't needed yet |
 
 ---
 

@@ -1,15 +1,43 @@
-from .database import SessionLocal
-from .models import MonthlySpendSubmissions
+from .database import engine
+from sqlalchemy import inspect, select, func, MetaData, Table
 
-from sqlalchemy import text
 
-#this is to see if you can receive data from the database
-db = SessionLocal()
+def check_db():
 
-#Select everything from the monthly_spend_submissions table
-submissions = db.execute(text("SELECT * FROM monthly_spend_submissions")).fetchall()
+    # Check database connection configuration
+    print("Database type:", engine.dialect.name)
+    print("Database host:", engine.url.host)
+    print("Database name:", engine.url.database)
 
-for s in submissions:
-    #print(f"Submission ID: {s.submission_id}, Customer ID: {s.customer_id}, Month: {s.month}, Travel Spend: {s.travel_spend}, Food Spend: {s.food_spend}, Utility Spend: {s.utility_spend}")
-    print(f"Entry {s.entry_id} | Submission {s.submission_id} | Customer {s.customer_id} | "f"{s.month} | {s.category} > {s.subcategory} | £{s.amount:.2f}")
-db.close()
+    # Verify actual database connection
+    with engine.connect() as connection:
+
+        print("Connection successful!")
+
+        # Inspect existing tables
+        inspector = inspect(connection)
+        tables = inspector.get_table_names()
+
+        print("\nAvailable tables:")
+
+        if not tables:
+            print("No tables found.")
+
+        # Check the number of records in each table
+        for table_name in tables:
+
+            table = Table(
+                table_name,
+                MetaData(),
+                autoload_with=connection
+            )
+
+            count = connection.execute(
+                select(func.count()).select_from(table)
+            ).scalar_one()
+
+            print(f"{table_name}: {count} records")
+
+
+if __name__ == "__main__":
+    check_db()

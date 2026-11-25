@@ -15,6 +15,7 @@ def test_add_expense(page: Page):
     ).click()
     expect(rows).to_have_count(2)
 
+# Test
 # 2. Entering valid spending produces the correct confirmation
 def test_confirm_spending(page: Page):
     page.goto(URL)

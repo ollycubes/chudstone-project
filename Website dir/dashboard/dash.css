@@ -1,55 +1,469 @@
-.stat-row {
-  max-width: var(--content-width);
-  margin: 0 auto 1rem;
-}
 
-.stat-card {
-  background: var(--card);
-  border-radius: var(--radius-card);
-  padding: 1.25rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  color: var(--darkblueink);
-}
+/* ==========================================================================
+CONTENTS
+   1. Dashboard-only tokens (category colours)
+   2. Layout (chart, month panel, insights)
+   3. Cards
+   4. Chart header: title, view toggle, legend
+   5. Stacked bar chart
+   6. Chart tooltip
+   7. Month panel
+   8. Insight cards
+   9. View & edit modal
+  10. Footer
+  11. Responsive
 
-.stat-card-green {
-  background: var(--lightgreen);
-  border: 2px solid var(--green);
-}
+   Everything else (colours, fonts, buttons, header, pill, persona menu) comes from
+   /spending-form/form.css, which is loaded first.
+   ========================================================================== */
 
-.stat-label {
-  font-size: .78rem;
-  font-weight: 600;
-  color: var(--brownink);
-}
 
-.stat-value {
-  font-size: 1.75rem;
-  font-weight: 700;
-}
-
-.entries-table {
-  --bs-table-bg: transparent;
-  font-size: .85rem;
-  color: var(--brownink);
-}
-
-.entries-table th {
-  font-size: .75rem;
-  color: var(--darkblueink);
-  border-bottom: 2px solid var(--blue);
-}
-
-.entries-table td {
-  border-bottom: 1px solid var(--blue);
-}
-
-a.btn-next {
-  text-decoration: none;
-}
-.section-note {
-  font-size: .8rem;
-  color: var(--brownink);
-  margin-bottom: .75rem;
-}
+/* ==========================================================================
+   1. TOKENS
+   ========================================================================== */
+   :root {
+    --c-food:      var(--lime);   
+    --c-travel:    #7C9CF5;
+    --c-utilities: #E5484D;
+  
+    --c-food-ink:      #4F8A2B;
+    --c-travel-ink:    #4A6FD8;
+    --c-utilities-ink: #C42B30;
+  
+    --dash-width: 70rem;
+  }
+  
+  
+  /* ==========================================================================
+     2. LAYOUT
+     ========================================================================== */
+  .dash {
+    max-width: var(--dash-width);
+    margin: 0 auto;
+    padding-bottom: 1rem;
+  }
+  
+  .dash .intro {         
+    max-width: none;
+    margin: 0;
+  }
+  
+  #msg { max-width: var(--dash-width); }
+  
+  .dash-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 19rem;
+    grid-template-areas:
+      "chart    month"
+      "insights month";
+    gap: 1rem;
+    align-items: start;
+  }
+  .chart-card { grid-area: chart; }
+  .month-card { grid-area: month; }
+  .insights   { grid-area: insights; }
+  
+  
+  /* ==========================================================================
+     3. CARDS
+     ========================================================================== */
+  .panel {
+    background: var(--card);
+    border-radius: var(--radius-card);
+    padding: 1.25rem 1.5rem;
+    color: var(--darkblueink);
+    position: relative;
+  }
+  
+  .mini-card,
+  .insight-card {
+    background: var(--white);
+    border-radius: var(--radius-small);
+    padding: .9rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: .15rem;
+  }
+  
+  .mini-label {
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--darkblueink);
+  }
+  .mini-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--darkblueink);
+  }
+  .mini-sub {
+    font-size: .68rem;
+    color: var(--brownink);
+  }
+  .mini-delta {
+    font-size: .68rem;
+    color: var(--brownink);
+  }
+  .mini-delta:empty,
+  .mini-sub:empty { display: none; }
+  
+  .delta-icon {              /* small arrow in a circle next to "less/more than ..." */
+    display: inline-block;
+    width: .95rem;
+    height: .95rem;
+    line-height: .95rem;
+    margin-left: .25rem;
+    border-radius: 50%;
+    font-size: .5rem;
+    text-align: center;
+    vertical-align: middle;
+    color: var(--white);
+  }
+  .delta-good { background: var(--green); }
+  .delta-bad  { background: var(--red); }
+  .delta-flat { background: var(--icon-colour); }
+  
+  
+  /* ==========================================================================
+     4. CHART HEADER
+     ========================================================================== */
+  .chart-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .chart-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0 0 .35rem;
+  }
+  
+  /* Spending / Carbon toggle */
+  .view-toggle {
+    display: inline-flex;
+    background: var(--white);
+    border: 1px solid var(--greygreenline);
+    border-radius: 999px;
+    padding: 2px;
+  }
+  .view-btn {
+    border: 0;
+    background: none;
+    border-radius: 999px;
+    padding: .2rem .8rem;
+    font-size: .75rem;
+    color: var(--brownink);
+  }
+  .view-btn:hover:not(.active) { background: var(--card); }
+  .view-btn.active {
+    background: var(--lightgreen);
+    color: var(--darkblueink);
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1.5px var(--green);
+  }
+  .view-btn:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+  
+  .legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+    font-size: .68rem;
+    text-align: right;
+  }
+  .legend li { display: flex; justify-content: flex-end; align-items: center; gap: .4rem; }
+  .swatch {
+    width: .7rem;
+    height: .7rem;
+    border-radius: 2px;
+    background: var(--sw);
+  }
+  
+  
+  /* ==========================================================================
+     5. STACKED BAR CHART
+     ========================================================================== */
+  .chart {
+    --label-h: 1.6rem;                  /* room under the bars for the month names */
+    position: relative;
+    display: flex;
+    height: 18rem;
+    padding-left: 1.4rem;               /* room for the rotated axis title */
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  
+  .chart-ylabel {                       /* "kg CO₂e" / "£" */
+    position: absolute;
+    left: .2rem;
+    top: calc((100% - var(--label-h)) / 2);
+    transform-origin: left top;
+    transform: rotate(-90deg) translateX(-50%);   /* text runs upward, centred on the bars */
+    font-size: .68rem;
+    line-height: 1;
+    color: var(--brownink);
+    white-space: nowrap;
+  }
+  
+  .chart-plot {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    margin-left: 2.6rem;                /* room for the tick numbers */
+  }
+  
+  .chart-grid {
+    position: absolute;
+    inset: 0 0 var(--label-h) 0;
+    border-bottom: 1px solid var(--brownink);
+  }
+  .grid-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 1px dashed var(--greygreenline);
+  }
+  .grid-line span {
+    position: absolute;
+    right: calc(100% + .4rem);
+    top: 0;
+    transform: translateY(-50%);
+    font-size: .68rem;
+    color: var(--brownink);
+    white-space: nowrap;
+  }
+  
+  .chart-bars {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    gap: .6rem;
+  }
+  
+  .bar-col {
+    flex: 1 1 0;
+    min-width: 2.75rem;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) var(--label-h);
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--brownink);
+  }
+  .bar-area { position: relative; }
+  .bar-stack {
+    position: absolute;
+    bottom: 0;
+    left: 8%;
+    right: 8%;
+    display: flex;
+    flex-direction: column-reverse;     /* first category sits at the bottom */
+    transition: opacity .15s;
+  }
+  .bar-month {
+    align-self: center;
+    font-size: .78rem;
+  }
+  
+  .seg {
+    flex: 0 0 auto;
+    min-height: 0;
+    background: var(--seg);
+    outline-offset: -2px;
+  }
+  .seg:hover,
+  .seg:focus-visible { filter: brightness(.92); outline: 2px solid var(--navy); }
+  
+  .bar-col.dim .bar-stack { opacity: .45; }
+  .bar-col.dim:hover .bar-stack,
+  .bar-col.dim:focus-visible .bar-stack { opacity: .8; }
+  .bar-col.selected .bar-month { font-weight: 700; color: var(--darkblueink); }
+  .bar-col:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+  
+  .chart-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    font-size: .85rem;
+    color: var(--brownink);
+  }
+  
+  
+  /* ==========================================================================
+     6. CHART TOOLTIP
+     ========================================================================== */
+  .chart-tip {
+    position: absolute;
+    z-index: 5;
+    pointer-events: none;
+    background: var(--white);
+    border: 1px solid var(--greygreenline);
+    border-radius: var(--radius-small);
+    box-shadow: var(--menu-shadow);
+    padding: .4rem .65rem;
+    font-size: .7rem;
+    color: var(--darkblueink);
+    white-space: nowrap;
+  }
+  .chart-tip[hidden] { display: none; }
+  .tip-cat   { display: flex; align-items: center; gap: .35rem; color: var(--brownink); }
+  .tip-main  { display: block; font-size: .95rem; font-weight: 700; }
+  .tip-alt   { display: block; color: var(--brownink); }
+  .tip-month { display: block; color: var(--brownink); font-size: .65rem; }
+  
+  
+  /* ==========================================================================
+     7. MONTH PANEL
+     ========================================================================== */
+  .month-card {
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+  }
+  .month-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .month-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0;
+    text-align: center;
+  }
+  .nav-arrow {
+    border: 0;
+    background: none;
+    font-size: .9rem;
+    color: var(--icon-colour);
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+  }
+  .nav-arrow:hover:not(:disabled) { background: var(--white); color: var(--darkblueink); }
+  .nav-arrow:disabled { opacity: .3; cursor: not-allowed; }
+  .nav-arrow:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+  
+  .side-actions {
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    margin-top: .25rem;
+  }
+  .side-actions .btn {            /* all three actions share the form's green button */
+    text-align: center;
+    text-decoration: none;
+  }
+  .btn-back {
+    background: none;
+    border: 0;
+    color: var(--icon-colour);
+    text-decoration: underline;
+    font-size: .75rem;
+    padding: .6rem 0;
+  }
+  .btn-back:hover { color: var(--darkblueink); }
+  .btn:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+  
+  
+  /* ==========================================================================
+     8. INSIGHT CARDS
+     ========================================================================== */
+  .insights {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .75rem;
+  }
+  .insight-card { min-height: 8.5rem; justify-content: center; }
+  .insight-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--darkblueink);
+  }
+  .insight-value[data-cat="Food"]      { color: var(--c-food-ink); }
+  .insight-value[data-cat="Travel"]    { color: var(--c-travel-ink); }
+  .insight-value[data-cat="Utilities"] { color: var(--c-utilities-ink); }
+  .insight-link {
+    margin-top: .35rem;
+    font-size: .65rem;
+    color: var(--icon-colour);
+  }
+  .insight-link:hover { color: var(--darkblueink); }
+  .insight-link:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+  
+  
+  /* ==========================================================================
+     9. VIEW & EDIT MODAL
+     ========================================================================== */
+  .entries-modal { background: var(--card); border-radius: var(--radius-card); color: var(--darkblueink); }
+  .entries-modal .modal-header { border-bottom-color: var(--blue); }
+  
+  .entries-table {
+    --bs-table-bg: transparent;
+    font-size: .85rem;
+    color: var(--brownink);
+  }
+  .entries-table th {
+    font-size: .75rem;
+    color: var(--darkblueink);
+    border-bottom: 2px solid var(--blue);
+  }
+  .entries-table td { border-bottom: 1px solid var(--blue); }
+  
+  .row-edit {
+    border: 0;
+    background: none;
+    font-size: .75rem;
+    color: var(--icon-colour);
+    text-decoration: underline;
+    white-space: nowrap;
+  }
+  .row-edit:hover { color: var(--darkblueink); }
+  
+  .section-note {
+    font-size: .8rem;
+    color: var(--brownink);
+    margin-bottom: .75rem;
+  }
+  a.btn-next { text-decoration: none; }
+  
+  
+  /* ==========================================================================
+    10. FOOTER
+     ========================================================================== */
+  footer.dash-footer { max-width: var(--dash-width); }
+  
+  
+  /* ==========================================================================
+    11. RESPONSIVE
+     ========================================================================== */
+  @media (max-width: 991.98px) {           /* tablet: month panel moves under the chart */
+    .dash-grid {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        "chart"
+        "month"
+        "insights";
+    }
+  }
+  
+  @media (max-width: 575.98px) {           /* phone */
+    .panel { padding: 1rem; }
+    .chart-head { flex-direction: column; }
+    .legend { flex-direction: row; flex-wrap: wrap; gap: .75rem; }
+    .chart { height: 15rem; }
+    .insights { grid-template-columns: minmax(0, 1fr); }
+    .insight-card { min-height: 0; }
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    .bar-stack { transition: none; }
+  }
+  

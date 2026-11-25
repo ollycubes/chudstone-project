@@ -38,6 +38,10 @@ class SpendingForm(BaseModel):
     # optional, one per entry (blank if the user didn't write one). Same 200 limit as the form's input box
     note: list[Annotated[str, Field(max_length=200)]] = Field(default_factory=list, max_length=50)
 
+def carbon_kg(amount, emission_factor: float) -> float:
+    #carbon is calculated to be used by /submit and edits
+    #avoids floating point rounding errors
+    return ((float(amount) * 100) * (emission_factor * 1000)) / 100000
 
 @app.get("/categories")
 def categories(db: Session = Depends(get_db)) -> dict[str, list[str]]:
@@ -119,7 +123,7 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
             category=known[sub][0],
             subcategory=sub,
             amount=float(amount),
-            carbon_impact=((float(amount)*100)*(known[sub][1]*1000))/100000, #amount*emission_factor but avoids floating point rounding errors
+            carbon_impact=carbon_kg(amount, known[sub][1]), #amount*emission_factor but avoids floating point rounding errors
             notes=note.strip() or None,  # blank notes are saved as NULL
             date_submitted=now,
         )
@@ -161,6 +165,71 @@ def get_submission(submission_id: int, db: Session = Depends(get_db)) -> dict:
             for r in rows
         ],
     }
+
+@app.get("/entries")
+def entries(
+    customer_id: Annotated[int, Query(ge=1)] = 1,
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    # dashboard builds chart, totals and insight cards from this list
+    M = MonthlySpendSubmissions
+    rows = db.scalars(
+        select(M).where(M.customer_id == customer_id).order_by(M.month, M.submission_id, M.entry_id)
+    ).all()
+    return [
+        {
+            "entryId": r.entry_id,
+            "submissionId": r.submission_id,
+            "month": r.month,
+            "category": r.category,
+            "subcategory": r.subcategory,
+            "amount": r.amount,
+            "carbonKg": r.carbon_impact,
+            "note": r.notes,
+        }
+        for r in rows
+    ]
+
+
+@app.put("/entries/{entry_id}")
+def update_entry(
+    entry_id: int,
+    subcategory: Annotated[str, Form()],
+    amount: Annotated[Decimal, Form(gt=0, le=1_000_000_000, decimal_places=2)],
+    note: Annotated[str, Form(max_length=200)] = "",
+    db: Session = Depends(get_db),
+) -> dict:
+    # edit any saved entry and then category and carbon are calculated again from the edited submission
+    M = MonthlySpendSubmissions
+    row = db.scalar(select(M).where(M.entry_id == entry_id))
+    if row is None:
+        raise HTTPException(404, "Entry not found.")
+
+    found = db.execute(
+        select(Categories.category_name, Categories.emission_factor)
+        .where(Categories.subcategory_name == subcategory)
+    ).first()
+    if found is None:
+        raise HTTPException(422, f"Unknown type {subcategory}.")
+
+    row.category = found[0]
+    row.subcategory = subcategory
+    row.amount = float(amount)
+    row.carbon_impact = carbon_kg(amount, found[1])
+    row.notes = note.strip() or None 
+    db.commit()
+
+    return {
+        "entryId": row.entry_id,
+        "submissionId": row.submission_id,
+        "month": row.month,
+        "category": row.category,
+        "subcategory": row.subcategory,
+        "amount": row.amount,
+        "carbonKg": row.carbon_impact,
+        "note": row.notes,
+    }
+
 
 
 def category_totals(db: Session, customer_id: int, month: str | None = None):

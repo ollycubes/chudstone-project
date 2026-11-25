@@ -45,7 +45,13 @@ python -m api.seed
 
 This makes the tables and fills them with the test categories, personas and some example spending.
 
-The seed only fills tables that are empty. If you change the seed data you need to delete `src/api/app.db` and run it again.
+The seed only fills tables that are empty. To wipe the database and start again (for example after changing the seed data), run:
+
+```
+python -m api.seed --reset
+```
+
+It asks you to type the database name before deleting anything. This deletes **all** data, including real submissions, so be careful on the shared Azure database.
 
 To check the data is there:
 

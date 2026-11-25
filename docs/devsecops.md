@@ -57,7 +57,7 @@ To fix it you'd bump the version in `requirements.txt` to the fix version.
 ### 5. DAST: OWASP ZAP [X]
 
 - **Tool:** OWASP ZAP API scan (`zaproxy/action-api-scan`)
-- **How it works:** the job seeds a fresh database, starts the real API with uvicorn, then ZAP reads our OpenAPI spec (`/openapi.json`) and attacks every endpoint in it
+- **How it works:** the job seeds a fresh local SQLite database (the pipeline has no `DATABASE_URL`, so it never touches the shared Azure database), starts the real API with uvicorn, then ZAP reads our OpenAPI spec (`/openapi.json`) and attacks every endpoint in it
 - **What it tests:** invalid input, unexpected parameters, malformed requests, error handling, exposed technical errors (e.g. stack traces) and common attacks like SQL injection and XSS
 - **When:** every push to any branch, and every PR into `main` (takes a few minutes)
 - **Findings:** ZAP gives each alert a risk level of High, Medium, Low or Informational. The full report (HTML, Markdown and JSON) is in the `dast-report` artifact, and the API's own log is in `dast-api-log`
@@ -84,7 +84,8 @@ To fix it you'd bump the version in `requirements.txt` to the fix version.
 
 ## Security basics we follow
 
-- No secrets in GitHub. `.env` and `*.db` are in `.gitignore`
+- No secrets in GitHub. `.env` and `*.db` are in `.gitignore`; only `.env.example`, with placeholder values, is committed
+- The Azure database only accepts encrypted connections (`sslmode=require`) from IP addresses in its firewall rules
 - Only made-up (synthetic) data, no real customers
 - All dependencies are pinned to exact versions in `requirements.txt`
 - Every change goes through a PR and needs someone else to approve it

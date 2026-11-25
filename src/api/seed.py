@@ -1,4 +1,8 @@
-"""Sample data for testing. Run once from src/:  python -m api.seed"""
+"""Sample data for testing. Run from src/:
+
+    python -m api.seed           fill any empty tables with the sample data
+    python -m api.seed --reset   delete ALL tables and data, then reseed from scratch
+"""
 
 from datetime import datetime, timezone
 
@@ -97,7 +101,22 @@ def seed(db):
         print("db seeded with customers")
 
 
+def reset():
+    """Drop every table and its data. Asks first, because on Azure this wipes everyone's shared data."""
+    url = engine.url
+    where = url.database if url.get_backend_name() == "sqlite" else f"{url.database} on {url.host}"
+    answer = input(f"This deletes ALL data in {where}. Type the database name ({url.database.split('/')[-1]}) to confirm: ")
+    if answer.strip() != url.database.split("/")[-1]:
+        raise SystemExit("Cancelled, nothing was deleted.")
+    Base.metadata.drop_all(bind=engine)
+    print("tables dropped")
+
+
 if __name__ == "__main__":
+    import sys
+
+    if "--reset" in sys.argv:
+        reset()
     Base.metadata.create_all(bind=engine)  # create the tables if they don't exist
     with SessionLocal() as db:
         seed(db)

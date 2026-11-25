@@ -4,7 +4,7 @@ NBS capstone project. A carbon footprint and savings advisor: you enter your mon
 ## Tech we're using
 
 - **Backend:** Python 3.14 with FastAPI (we picked Python over C#)
-- **Database:** SQLite with SQLAlchemy (we chose this over T-SQL, see [scope decisions](#sprint-1-scope-decisions))
+- **Database:** Azure PostgreSQL with SQLAlchemy, with a local SQLite fallback for the pipeline (see [scope decisions](#sprint-1-scope-decisions))
 - **Frontend:** HTML, CSS, JavaScript and Bootstrap, served by the API
 - **Pipeline:** GitHub Actions: build, unit tests (pytest), SAST (CodeQL), SCA (pip-audit) and DAST (OWASP ZAP)
 
@@ -14,13 +14,15 @@ Run these from the repo root:
 
 ```
 pip install -r requirements-dev.txt
-PYTHONPATH=src python -m api.seed
+cp .env.example .env        # then fill in the database username and password
 uvicorn api.main:app --app-dir src --reload
 ```
 
+The shared Azure database is already seeded. Without a `.env` the app uses a local SQLite file instead; run `PYTHONPATH=src python -m api.seed` once to fill it.
+
 `--app-dir src` is needed because the `api` package lives in `src/`. Without it you get `ModuleNotFoundError: No module named 'api'`.
 
-Then go to http://localhost:8000. Full steps are in the [runbook](infra/README.md).
+Then go to http://localhost:8000. Full steps, including the database connection, are in the [runbook](infra/README.md).
 
 ## Docs
 
@@ -39,7 +41,7 @@ Where we've deliberately differed from the brief:
 | Brief asks for | What we did | Why |
 |---|---|---|
 | `POST /calculate` | `POST /submit` | `/submit` takes the spending, works out the carbon for each item and saves it, so it does the job `/calculate` was meant to do. See the [API contract](docs/api.md) |
-| T-SQL `infra/sql/schema.sql` and `seed.sql` | SQLite with SQLAlchemy models (`src/api/models.py`) and a seed script (`src/api/seed.py`) | No database server needed, so everyone can run it locally and the pipeline can seed a fresh database every run |
+| T-SQL `infra/sql/schema.sql` and `seed.sql` | Azure PostgreSQL, with the tables defined as SQLAlchemy models (`src/api/models.py`) and filled by a seed script (`src/api/seed.py`). Falls back to SQLite when no database is configured | The same Python code builds the tables on any database, so we don't keep separate SQL scripts. The pipeline uses a fresh SQLite database every run, so it needs no secrets and never touches the shared data |
 | Separate `EmissionsFactors` table | Emission factors are a column on `categories` | Each subcategory has one factor, so a separate table wasn't needed yet |
 
 ---

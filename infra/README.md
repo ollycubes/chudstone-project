@@ -32,34 +32,65 @@ python -m venv .venv
 pip install -r requirements-dev.txt
 ```
 
-## 3. Set up the database
+## 3. Connect to the database
 
-We use **SQLite** for now, so there's no database server to install. The database is just a file at `src/api/app.db`. It isn't committed to GitHub, so everyone makes their own.
+We use a shared **Azure PostgreSQL** database called `chudstone`, on the server `t2capstonedatabaseserver.postgres.database.azure.com`. Everyone on the team reads and writes the same data.
 
-From the `src` folder run the seed script:
+To connect, copy `.env.example` to `.env` in the repo root.
+
+Mac / Linux:
+
+```
+cp .env.example .env
+```
+
+Windows:
+
+```
+Copy-Item .env.example .env
+```
+
+Then open `.env` and put in the username and password (ask the team for them):
+
+```
+DATABASE_URL=postgresql+psycopg://USERNAME:PASSWORD@t2capstonedatabaseserver.postgres.database.azure.com:5432/chudstone?sslmode=require
+```
+
+- `.env` is in `.gitignore`. **Never commit it.**
+- The database name at the end must be `chudstone`, not `postgres`.
+- If the password has special characters (`@ : / ? # % &` etc.) they must be URL-encoded, e.g. `@` becomes `%40`.
+- Your IP address must be allowed in the Azure server's **Networking → Firewall rules**, or the connection will time out.
+
+**No `.env`?** Then the app falls back to a local SQLite file at `src/api/app.db` (made automatically, not committed). This is what the pipeline uses. If your app suddenly seems to have "lost" its data, check that your `.env` is still there.
+
+To check you're connected, from the `src` folder:
 
 ```
 cd src
+python -m api.checkDB
+```
+
+It prints the database type, host and name, then each table and how many rows it has. You should see `postgresql` and `chudstone`.
+
+## 4. Seed the database
+
+The Azure database is already seeded, so you normally don't need to do this. Still in the `src` folder:
+
+```
 python -m api.seed
 ```
 
-This makes the tables and fills them with the test categories, personas and some example spending.
+This makes any missing tables and fills **empty** tables with the test categories, personas and some example spending. Tables that already have data are left alone.
 
-The seed only fills tables that are empty. To wipe the database and start again (for example after changing the seed data), run:
+To wipe the database and start again (for example after changing the seed data):
 
 ```
 python -m api.seed --reset
 ```
 
-It asks you to type the database name before deleting anything. This deletes **all** data, including real submissions, so be careful on the shared Azure database.
+It shows which database it's about to wipe and asks you to type its name before deleting anything. This deletes **all** data, including real submissions, and on Azure that's everyone's data, so tell the team first.
 
-To check the data is there:
-
-```
-python -m api.checkDB
-```
-
-## 4. Run the API
+## 5. Run the API
 
 Still in the `src` folder:
 
@@ -72,9 +103,9 @@ Then open:
 - http://localhost:8000 for the spending form
 - http://localhost:8000/docs for the API docs
 
-**Important:** if you delete and reseed the database while the API is running, stop it (Ctrl+C) and start it again. Otherwise it keeps reading the old deleted file.
+**Important:** if you change `.env` while the API is running, stop it (Ctrl+C) and start it again. It only reads `.env` when it starts.
 
-## 5. Run the tests
+## 6. Run the tests
 
 From the project root (not `src`):
 
@@ -82,16 +113,28 @@ From the project root (not `src`):
 pytest tests/api -v
 ```
 
-The tests use their own in-memory database, so you don't need to seed anything or have the API running first, and they won't change your `app.db`.
+The tests use their own in-memory database, so you don't need to seed anything or have the API running first, and they never touch Azure or your `app.db`.
 
 The Playwright frontend tests in `tests/frontend/` are skipped unless Playwright is installed.
 
 ## Configuration
 
-There's nothing to configure yet: no passwords, keys or `.env` file. The database path is set in `src/api/database.py`.
+The only setting is `DATABASE_URL`, read in `src/api/database.py`:
 
-When we add secrets later they'll go in a `.env` file (already in `.gitignore`) or Azure Key Vault, never in the code.
+| `DATABASE_URL` | Database used | Who uses it |
+|---|---|---|
+| Set (in `.env` or as an environment variable) | That database, i.e. Azure PostgreSQL | The team, locally |
+| Not set | Local SQLite file `src/api/app.db` | The pipeline, or anyone without a `.env` |
+
+A real environment variable wins over `.env`, so a hosted app could set `DATABASE_URL` directly.
+
+The pipeline deliberately has no `DATABASE_URL`, so builds and security scans never write test data into the shared Azure database.
+
+## Looking at the data
+
+To browse the Azure tables visually, use the **PostgreSQL** extension for VS Code (by Microsoft) or **pgAdmin**. Connect with the same server, username, password and database (`chudstone`) as your `.env`, on port `5432` with SSL set to require.
 
 ## Still to do
 
+- Move the database password into Azure Key Vault
 - Terraform is a stretch goal

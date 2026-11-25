@@ -37,7 +37,10 @@ To do ?
 | Seed Travel, Food and Utilities data | DamoDB | X |
 | Add emission factors to the categories table | DamoDB | X |
 | Personas seeded into `customers` | numgum | X |
-| `infra/sql/schema.sql` and `seed.sql` in T-SQL | | Descoped, we use SQLite |
+| `infra/sql/schema.sql` and `seed.sql` in T-SQL | | Descoped, SQLAlchemy models build the tables |
+| Move to a shared Azure PostgreSQL database (`chudstone`) | | X |
+| Local SQLite fallback so the pipeline runs without secrets | | X |
+| `python -m api.seed --reset` to wipe and reseed | Oliver | X |
 | `EmissionsFactors` table with source, version and effective date | | Descoped, factors live on `categories` |
 | `Assumptions` table | | ? |
 
@@ -79,5 +82,5 @@ To do ?
 - Full carbon calculation engine (Sprint 2)
 - Recommendations for saving carbon
 - Login so we don't need the persona dropdown
-- Azure Key Vault for secrets
+- Azure Key Vault for the database password
 - Terraform (stretch)

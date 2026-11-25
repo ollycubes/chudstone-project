@@ -194,6 +194,7 @@ CONTENTS
     position: relative;
     display: flex;
     height: 18rem;
+    padding-top: 0.65rem;   /* fixed the max number being cut off */
     padding-left: 1.4rem;               /* room for the rotated axis title */
     overflow-x: auto;
     overflow-y: hidden;
@@ -221,6 +222,7 @@ CONTENTS
   .chart-grid {
     position: absolute;
     inset: 0 0 var(--label-h) 0;
+    border-left: 1px solid var(--brownink);    /*Added the vertical y-axis */
     border-bottom: 1px solid var(--brownink);
   }
   .grid-line {
@@ -231,13 +233,22 @@ CONTENTS
   }
   .grid-line span {
     position: absolute;
-    right: calc(100% + .4rem);
+    right: calc(100% + .35rem);
     top: 0;
     transform: translateY(-50%);
     font-size: .68rem;
     color: var(--brownink);
     white-space: nowrap;
   }
+
+  .grid-line span::after {
+  content: "";
+  display: inline-block;
+  width: .35rem;
+  border-top: 1px solid var(--brownink);
+  margin-left: .25rem;
+  vertical-align: middle;
+}
   
   .chart-bars {
     position: absolute;

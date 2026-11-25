@@ -75,14 +75,14 @@ def totals(
         for rows in rows
     ]
 
-
+#direct user to dashboard first
 @app.get("/", include_in_schema=False)
 def home() -> RedirectResponse:
-    return RedirectResponse("/spending-form/form.html")
+    return RedirectResponse("/dashboard/dash.html")
 
 @app.get("/dashboard", include_in_schema=False)
 def dashboard() -> RedirectResponse:
-    return RedirectResponse("/dashboard/test-example.html")
+    return RedirectResponse("/dashboard/dash.html")
 
 
 @app.post("/submit", status_code=201)

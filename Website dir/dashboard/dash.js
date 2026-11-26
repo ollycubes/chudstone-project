@@ -246,7 +246,8 @@ function renderChart() {
     label.className = "bar-month";
     label.textContent = monthShort(ym, multiYear);
     label.setAttribute("aria-label", `Show ${monthName(ym)}`);
-    label.style.cssText = "border:0;background:none;padding:0;color:inherit;font:inherit;";
+    label.style.cssText = "border:0;background:none;padding:0;";
+    //color:inherit;font:inherit;";
 
     col.append(area, label);
     barsEl.appendChild(col);

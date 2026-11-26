@@ -224,11 +224,18 @@ CONTENTS
     top: calc((100% - var(--label-h)) / 2);
     transform-origin: left top;
     transform: rotate(-90deg) translateX(-50%);   /* text runs upward, centred on the bars */
-    font-size: .68rem;
+    font-size: .75rem;
+    font-weight: 700;
     line-height: 1;
     color: var(--brownink);
     white-space: nowrap;
   }
+
+  .chart-xlabel {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
   
   .chart-plot {
     position: relative;
@@ -298,7 +305,7 @@ CONTENTS
   }
   .bar-month {
     align-self: center;
-    font-size: .78rem;
+    font-size: .7rem;
   }
   
   .seg {

@@ -183,6 +183,7 @@ function renderChart() {
   $("chart-empty").classList.toggle("d-none", hasData);
   $("chart-title").textContent = view === "spend" ? "Spending overview" : "Carbon overview";
   $("chart-ylabel").textContent = view === "spend" ? "Spending (£)" : "Carbon (kg CO₂e)";
+  $("chart-xlabel").textContent = "Month"; //x-labrl month
 
   $("legend").replaceChildren(...state.cats.map(cat => {
     const li = document.createElement("li");
@@ -247,7 +248,7 @@ function renderChart() {
     label.textContent = monthShort(ym, multiYear);
     label.setAttribute("aria-label", `Show ${monthName(ym)}`);
     label.style.cssText = "border:0;background:none;padding:0;";
-    //color:inherit;font:inherit;";
+    //color:inherit;font:inherit;"; //Getting rid of inherit to customise the month font
 
     col.append(area, label);
     barsEl.appendChild(col);

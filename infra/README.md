@@ -130,9 +130,9 @@ A real environment variable wins over `.env`, so a hosted app could set `DATABAS
 
 The pipeline deliberately has no `DATABASE_URL`, so builds and security scans never write test data into the shared Azure database.
 
-### Persona sessions
+### Customer ID sessions
 
-The persona picked in the dropdown is kept in a signed session cookie (`chudstone_session`), read in `src/api/main.py`. The API takes the customer from that cookie only, so changing an id in the URL or form can't show, edit or delete another persona's spending.
+The persona picked in the dropdown is kept in a signed session cookie (`chudstone_session`), read in `src/api/main.py`. The API takes the customer from that cookie only, so changing an id in the URL or form can't show, edit or delete another customer ID spending.
 
 | Setting | What it does |
 |---|---|

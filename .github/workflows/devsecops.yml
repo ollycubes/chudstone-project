@@ -86,12 +86,10 @@ jobs:
           done
           echo "App did not start" && cat uvicorn.log && exit 1
       - name: Run frontend tests
-        # test_demo.py still targets the old form on Live Server (port 5500), so it's left out
-        # until it's updated for the new form (see docs/backlog.md)
         run: |
           mkdir -p reports
           set -o pipefail
-          pytest tests/frontend -v --ignore=tests/frontend/test_demo.py \
+          pytest tests/frontend -v \
             --junitxml=reports/frontend.xml --screenshot=only-on-failure --output=reports/screenshots \
             | tee reports/frontend.txt
       - name: Add results to the run summary

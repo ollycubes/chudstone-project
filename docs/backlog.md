@@ -62,7 +62,7 @@ To do ?
 |---|---|---|
 | Pipeline with build step (`devsecops.yml`) | Oliver | X |
 | SAST with CodeQL | Doml04 | X |
-| Playwright frontend tests | numgum | O (need updating for the new form) |
+| Playwright frontend tests | numgum | X |
 | Unit tests for the API with pytest, run in the pipeline | Oliver | X |
 | SCA with `pip-audit` in the pipeline | Oliver | X |
 | Bandit in the pipeline | | ? |

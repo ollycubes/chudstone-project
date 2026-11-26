@@ -310,7 +310,7 @@ CONTENTS
   .seg:hover,
   .seg:focus-visible { filter: brightness(.92); outline: 2px solid var(--navy); }
   
-  .bar-col.dim .bar-stack { opacity: .45; }
+  .bar-col.dim .bar-stack { opacity: .65; }
   .bar-col.dim:hover .bar-stack,
   .bar-col.dim:focus-visible .bar-stack { opacity: .8; }
   .bar-col.selected .bar-month { font-weight: 700; color: var(--darkblueink); }

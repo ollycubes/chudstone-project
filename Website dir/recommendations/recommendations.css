@@ -1,0 +1,232 @@
+/* ==========================================================================
+CONTENTS
+   1. Tokens
+   2. Layout
+   3. Cards
+   4. History graph
+   5. Recommendations list
+   6. Footer
+   7. Responsive
+
+
+   /* 1. TOKENS */
+
+:root {
+  --c-spend:  var(--green-hover);
+  --c-carbon: var(--navy);
+
+  --ways-width: 60rem;
+}
+
+   /* 2. LAYOUT */
+.ways {
+  max-width: var(--ways-width);
+  margin: 0 auto;
+  padding-bottom: 1rem;
+}
+
+.ways .intro {
+  max-width: none;
+  margin: 0;
+}
+
+#msg { max-width: var(--ways-width); }
+
+.ways-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 2.5rem;
+}
+
+   /* 3. CARDS */
+
+.panel {
+  background: var(--card);
+  border-radius: var(--radius-card);
+  padding: 1.25rem 1.5rem;
+  color: var(--darkblueink);
+  position: relative;
+}
+
+.section-note {
+  font-size: .8rem;
+  color: var(--brownink);
+  margin-bottom: .75rem;
+}
+
+a.btn-next { text-decoration: none; }
+.btn:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+
+
+   /* 4. HISTORY GRAPH */
+.legend {
+  list-style: none;
+  margin: 0 0 .5rem;
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .25rem 1rem;
+  font-size: .85rem;
+  font-weight: 700;
+}
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.legend svg {
+  width: 1.9rem;
+  height: .75rem;
+  overflow: visible;
+}
+
+.sw-line         { stroke-width: 2.5; }
+.sw-line.spend   { stroke: var(--c-spend); }
+.sw-line.carbon  { stroke: var(--c-carbon); stroke-dasharray: 6 3; }
+.sw-dot.spend    { fill: var(--c-spend); }
+.sw-dot.carbon   { fill: var(--c-carbon); }
+
+.plot {
+  position: relative;
+  height: 26rem;
+}
+.plot svg { display: block; } 
+
+.plot text {
+  font-family: inherit;
+  font-size: 11px;
+  fill: var(--brownink);
+}
+.plot .month.sel {
+  font-weight: 700;
+  fill: var(--darkblueink);
+}
+
+.plot .grid     { stroke: var(--greygreenline); stroke-dasharray: 4 4; }
+.plot .axis     { fill: none; stroke: var(--brownink); }
+.plot .sel-band { fill: var(--lightgreen); }   /* highlights the selected month */
+
+.plot .line         { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.plot .line.spend   { stroke: var(--c-spend); }
+.plot .line.carbon  { stroke: var(--c-carbon); stroke-dasharray: 7 5; }
+.plot .dot          { stroke: var(--white); stroke-width: 1.5; }
+.plot .dot.spend    { fill: var(--c-spend); }
+.plot .dot.carbon   { fill: var(--c-carbon); }
+
+.plot .hit                { fill: transparent; cursor: pointer; }
+.plot .hit:hover          { fill: rgba(1, 21, 70, .05); }
+.plot .hit:focus          { outline: none; }
+.plot .hit:focus-visible  { fill: rgba(1, 21, 70, .05); stroke: var(--navy); stroke-width: 2; }
+
+.chart-xlabel {
+  text-align: center;
+  font-size: .85rem;
+  font-weight: 700;
+  margin-top: .25rem;
+}
+
+.chart-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  font-size: .85rem;
+  color: var(--brownink);
+}
+
+.chart-tip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  background: var(--white);
+  border: 1px solid var(--greygreenline);
+  border-radius: var(--radius-small);
+  box-shadow: var(--menu-shadow);
+  padding: .4rem .65rem;
+  font-size: .7rem;
+  color: var(--darkblueink);
+  white-space: nowrap;
+}
+.chart-tip[hidden] { display: none; }
+.tip-month { display: block; font-weight: 700; margin-bottom: .2rem; }
+.tip-row   { display: flex; align-items: center; gap: .4rem; color: var(--brownink); }
+.tip-row b { margin-left: auto; padding-left: .75rem; color: var(--darkblueink); }
+.tip-sw    { width: .7rem; height: .7rem; border-radius: 2px; }
+.tip-sw.spend  { background: var(--c-spend); }
+.tip-sw.carbon { background: var(--c-carbon); }
+
+   /* 5. RECOMMENDATIONS LIST */
+
+.recs {
+  display: flex;
+  flex-direction: column;
+}
+.recs h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 .25rem;
+}
+
+.rec-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+.rec-body {
+  background: var(--white);
+  border: 1px solid var(--greygreenline);
+  border-radius: var(--radius-small);
+  padding: .75rem .9rem;
+  color: var(--brownink);
+}
+
+.rec-tag {
+  display: block;
+  font-size: .68rem;
+}
+
+.rec-action {
+  display: block;
+  margin: .15rem 0;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--darkblueink);
+}
+.rec-basis {
+  display: block;
+  font-size: .68rem;
+}
+
+.rec-empty {
+  font-size: .85rem;
+  color: var(--brownink);
+  margin: 0 0 1rem;
+}
+.rec-add { align-self: flex-start; }
+
+   /* 6. FOOTER */
+
+footer { max-width: var(--ways-width); }
+
+   /* 7. RESPONSIVE */
+
+@media (min-width: 992px) {              /* desktop: the list scrolls so both cards stay the same height */
+  .rec-list {
+    max-height: 22rem;   /* roughly the height of the graph card */
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 991.98px) {           /* tablet: recommendations move under the graph */
+  .ways-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 575.98px) {           /* phone */
+  .panel { padding: 1rem; }
+  .plot  { height: 18rem; }
+}

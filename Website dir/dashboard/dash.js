@@ -1,4 +1,3 @@
-
 /* ==========================================================================
    Dashboard
    Data comes from the API:
@@ -29,7 +28,8 @@ const state = {
   months: [],          // every month from the first to the last with data (gaps included)
   cats: [],            // categories shown in the chart
   selected: null,      // "YYYY-MM"
-  view: "spend",       // "spend" | "carbon"
+  view: "spend",      // "spend" | "carbon"
+  range: 12 
 };
 
 const $ = id => document.getElementById(id);
@@ -83,6 +83,8 @@ function aggregate(entries) {
 }
 
 const bucket = ym => state.byMonth[ym] || emptyBucket();
+
+const visibleMonths = () => state.months.slice(-state.range); //month range
 
 // the category with the biggest value in a { category: value } object, or null if nothing was spent
 function topCategory(values) {
@@ -158,7 +160,8 @@ function rebuild() {
   const found = new Set(state.entries.map(e => e.category));
   state.cats = [...CAT_ORDER, ...[...found].filter(c => !CAT_ORDER.includes(c)).sort()];
 
-  if (!state.months.includes(state.selected)) state.selected = state.months[state.months.length - 1] || null;
+  const shown = visibleMonths();
+  if (!shown.includes(state.selected)) state.selected = shown[shown.length - 1] || null;
   renderChart();
   renderPanel();
   renderInsights();
@@ -174,7 +177,8 @@ const tip = $("chart-tip");
 
 function renderChart() {
   const view = state.view;
-  const hasData = state.months.length > 0;
+  const shown = visibleMonths();
+  const hasData = shown.length > 0;
   chartEl.classList.toggle("d-none", !hasData);
   $("chart-empty").classList.toggle("d-none", hasData);
   $("chart-title").textContent = view === "spend" ? "Spending overview" : "Carbon overview";
@@ -194,7 +198,7 @@ function renderChart() {
   hideTip();
   if (!hasData) return;
 
-  const totals = state.months.map(m => sum(bucket(m)[view]));
+  const totals = shown.map(m => sum(bucket(m)[view]));
   const { top, step } = niceScale(Math.max(...totals));
 
   for (let v = 0; v <= top + step / 1000; v += step) {
@@ -208,8 +212,8 @@ function renderChart() {
     gridEl.appendChild(line);
   }
 
-  const multiYear = state.months[0].slice(0, 4) !== state.months[state.months.length - 1].slice(0, 4);
-  state.months.forEach((ym, i) => {
+  const multiYear = shown[0].slice(0, 4) !== shown[shown.length - 1].slice(0, 4);
+  shown.forEach((ym, i) => {
     const b = bucket(ym);
     const col = document.createElement("div");
     col.className = "bar-col";
@@ -249,7 +253,7 @@ function renderChart() {
   });
 
   $("chart-summary").textContent =
-    `Stacked bar chart of ${view === "spend" ? "spending" : "carbon"} by category for ${state.months.length} month${state.months.length === 1 ? "" : "s"}.`;
+    `Stacked bar chart of ${view === "spend" ? "spending" : "carbon"} by category for ${shown.length} month${shown.length === 1 ? "" : "s"}.`;
   updateSelection();
 }
 
@@ -334,6 +338,23 @@ document.querySelectorAll(".view-btn").forEach(btn => btn.addEventListener("clic
     b.setAttribute("aria-pressed", on);
   });
   renderChart();
+  renderInsights();
+}));
+
+// 1 year / 6 months / 3 months toggle
+document.querySelectorAll(".range-btn").forEach(btn => btn.addEventListener("click", () => {
+  const nextRange = Number(btn.dataset.range);
+  if (nextRange === state.range) return;
+  state.range = nextRange;
+  document.querySelectorAll(".range-btn").forEach(b => {
+    const on = b === btn;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", on);
+  });
+  const shown = visibleMonths();
+  if (!shown.includes(state.selected)) state.selected = shown[shown.length - 1] || null;
+  renderChart();
+  renderPanel();
   renderInsights();
 }));
 

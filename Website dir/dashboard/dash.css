@@ -166,6 +166,24 @@ CONTENTS
     box-shadow: inset 0 0 0 1.5px var(--green);
   }
   .view-btn:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+
+  .range-btn {
+    border: 0;
+    background: none;
+    border-radius: 999px;
+    padding: .2rem .7rem;
+    font-size: .75rem;
+    color: var(--brownink);
+  }
+  .range-btn:hover:not(.active) { background: var(--card); }
+  
+  .range-btn.active {
+    background: var(--lightgreen);
+    color: var(--darkblueink);
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1.5px var(--green);
+  }
+  .range-btn:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
   
   .legend {
     list-style: none;
@@ -233,7 +251,7 @@ CONTENTS
   }
   .grid-line span {
     position: absolute;
-    right: calc(100% + .35rem);
+    right: calc(100% + 0.35rem);
     top: 0;
     transform: translateY(-50%);
     font-size: .68rem;
@@ -241,14 +259,14 @@ CONTENTS
     white-space: nowrap;
   }
 
-  .grid-line span::after {
-  content: "";
-  display: inline-block;
-  width: .35rem;
-  border-top: 1px solid var(--brownink);
-  margin-left: .25rem;
-  vertical-align: middle;
-}
+    .grid-line span::after {
+    content: "";
+    display: inline-block;
+    width: .35rem;
+    border-top: 1px solid var(--brownink);
+    margin-left: .25rem;
+    vertical-align: middle;
+  }
   
   .chart-bars {
     position: absolute;

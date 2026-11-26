@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -35,11 +34,18 @@
       <!-- Chart -->
       <section class="panel chart-card" aria-labelledby="chart-title">
         <div class="chart-head">
-          <div>
-            <h2 id="chart-title" class="chart-title">Spending overview</h2>
-            <div class="view-toggle" role="group" aria-label="Chart view">
-              <button type="button" class="view-btn active" data-view="spend" aria-pressed="true">Spending</button>
-              <button type="button" class="view-btn" data-view="carbon" aria-pressed="false">Carbon</button>
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <div>
+              <h2 id="chart-title" class="chart-title">Spending overview</h2>
+              <div class="view-toggle" role="group" aria-label="Chart view">
+                <button type="button" class="view-btn active" data-view="spend" aria-pressed="true">Spending</button>
+                <button type="button" class="view-btn" data-view="carbon" aria-pressed="false">Carbon</button>
+              </div>
+            </div>
+            <div class="view-toggle" role="group" aria-label="Time range">
+              <button type="button" class="range-btn active" data-range="12" aria-pressed="true">1 year</button>
+              <button type="button" class="range-btn" data-range="6" aria-pressed="false">6 months</button>
+              <button type="button" class="range-btn" data-range="3" aria-pressed="false">3 months</button>
             </div>
           </div>
           <ul class="legend" id="legend" aria-label="Categories"></ul>

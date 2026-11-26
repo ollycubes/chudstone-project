@@ -11,18 +11,20 @@
 const STORAGE_KEY = "capstone.customerId";
 
 const RULES = [
-  { category: "Travel", subcategory: "Self-owned car", action: "Combine two errands into one drive." },
-  { category: "Travel", subcategory: "Motorbike", action: "Combine short errands into one ride." },
-  { category: "Travel", subcategory: "Bus", action: "Walk one short trip you usually pay a bus fare for." },
-  { category: "Travel", subcategory: "Train", action: "Combine two visits into one train trip." },
-  { category: "Travel", subcategory: "Subway", action: "Walk a short Underground trip." },
-  { category: "Travel", subcategory: "Carshare", action: "Coordinate a shared errand you would otherwise make on separate trips." },
-  { category: "Food", subcategory: "Groceries", action: "Make one meal a week with food you already have." },
-  { category: "Food", subcategory: "Delivery", action: "Swap one planned takeaway for a batch-cooked meal." },
+  { category: "Travel", subcategory: "Self-owned car", action: "Walk or cycle a nearby errand you’d normally drive to, or combine two errands into one drive." },
+  { category: "Travel", subcategory: "Motorbike", action: "Walk a short errand you’d normally ride to, or group two stops into one ride." },
+  { category: "Travel", subcategory: "Bus", action: "Walk or cycle a short trip you’d normally pay a bus fare for, if the route suits you." },
+  { category: "Travel", subcategory: "Train", action: "Put two visits on the same day so you can make one train trip and avoid buying a separate ticket." },
+  { category: "Travel", subcategory: "Taxi", action: "Walk a short journey you’d normally take by taxi, if the route suits you." },
+  { category: "Travel", subcategory: "Airplane", action: "Compare a train with a flight for an upcoming trip where both options work for you." },
+  { category: "Travel", subcategory: "Subway", action: "Walk or cyclea short journey, if it’s convenient and would lower the fare you pay." },
+  { category: "Travel", subcategory: "Carshare", action: "Plan two shared errands for the same drive, so the car makes one fewer trip." },
+  { category: "Food", subcategory: "Groceries", action: "Check your cupboards before shopping and plan one meal around food you already have." },
+  { category: "Food", subcategory: "Delivery", action: "Batch-cook an extra portion for a night you’d usually order a delivery." },
   { category: "Food", subcategory: "Restaurant/Dine out", action: "Swap one planned meal out for a home-cooked meal." },
-  { category: "Utilities", subcategory: "Electricity", action: "Air-dry one load you would normally tumble-dry each week." },
-  { category: "Utilities", subcategory: "Water", action: "Shorten regular showers if your water is metered." },
-  { category: "Utilities", subcategory: "Heating", action: "Adjust the timer for a regular period when your home is empty." },
+  { category: "Utilities", subcategory: "Electricity", action: "Air-dry a few loads you’d normally tumble-dry." },
+  { category: "Utilities", subcategory: "Water", action: "Try slightly reduce shower time on several days each week." },
+  { category: "Utilities", subcategory: "Heating", action: "Check the timer for a regular period when the home is empty." },
 ];
 
 // add thresholds lin but we can dicsuss

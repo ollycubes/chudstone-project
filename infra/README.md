@@ -119,7 +119,7 @@ The Playwright frontend tests in `tests/frontend/` are skipped unless Playwright
 
 ## Configuration
 
-The only setting is `DATABASE_URL`, read in `src/api/database.py`:
+The database setting is `DATABASE_URL`, read in `src/api/database.py`:
 
 | `DATABASE_URL` | Database used | Who uses it |
 |---|---|---|
@@ -129,6 +129,15 @@ The only setting is `DATABASE_URL`, read in `src/api/database.py`:
 A real environment variable wins over `.env`, so a hosted app could set `DATABASE_URL` directly.
 
 The pipeline deliberately has no `DATABASE_URL`, so builds and security scans never write test data into the shared Azure database.
+
+### Customer ID sessions
+
+The persona picked in the dropdown is kept in a signed session cookie (`chudstone_session`), read in `src/api/main.py`. The API takes the customer from that cookie only, so changing an id in the URL or form can't show, edit or delete another customer ID spending.
+
+| Setting | What it does |
+|---|---|
+| `SESSION_SECRET` | Signs the cookie. Set it to a long random string anywhere the app is hosted. If unset, a random one is made at startup, so everyone is signed out on every restart (fine locally). |
+| `SESSION_HTTPS_ONLY` | Set to `1` when the site is served over https, so the cookie is never sent over plain http. |
 
 ## Looking at the data
 

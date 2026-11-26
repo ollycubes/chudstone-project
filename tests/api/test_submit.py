@@ -9,10 +9,15 @@ CATEGORY = {sub: cat for cat, sub, _factor in CATEGORIESSEED}
 # a valid request, the same shape the form sends
 VALID = {
     "month": "2026-10",
-    "customer_id": "2",
     "subcategory_id": ["Bus", "Groceries"],
     "amount": ["10.00", "20.50"],
 }
+
+
+@pytest.fixture(autouse=True)
+def as_persona_2(sign_in):
+    # everything in this file is submitted as persona 2
+    sign_in(2)
 
 
 def submit(client, **changes):
@@ -38,9 +43,10 @@ def test_each_submission_gets_a_new_id(client):
     assert second == first + 1
 
 
-def test_customer_id_defaults_to_1(client):
-    data = {k: v for k, v in VALID.items() if k != "customer_id"}
-    assert client.post("/submit", data=data).status_code == 201
+def test_customer_id_in_the_form_is_ignored(client):
+    # the session decides who the spending belongs to, not a field the browser sends
+    sid = submit(client, customer_id="5").json()["submissionId"]
+    assert client.get(f"/submissions/{sid}").json()["customerId"] == 2
 
 
 def test_saved_submission_can_be_read_back(client):
@@ -121,9 +127,6 @@ def test_notes_are_stored_as_plain_text(client):
         pytest.param({"amount": ["10"]}, id="fewer amounts than types"),
         pytest.param({"subcategory_id": ["Plane", "Bus"]}, id="unknown subcategory"),
         pytest.param({"subcategory_id": ["Bus' OR '1'='1", "Bus"]}, id="sql injection in subcategory"),
-        pytest.param({"customer_id": "999"}, id="unknown persona"),
-        pytest.param({"customer_id": "0"}, id="persona 0"),
-        pytest.param({"customer_id": "abc"}, id="persona not a number"),
         pytest.param({"note": ["x" * 201, ""]}, id="note over 200 chars"),
         pytest.param({"note": ["only one"]}, id="fewer notes than entries"),
     ],
@@ -157,17 +160,7 @@ def test_validation_errors_dont_leak_technical_details(client):
     assert "sqlalchemy" not in body.lower()
 
 
-# ---------- known bugs ----------
+# ---------- ids too big for the database ----------
 
-@pytest.mark.xfail(strict=True, reason="Known bug: ids too big for SQLite cause a 500 instead of a 422/404")
-@pytest.mark.parametrize(
-    "request_",
-    [
-        pytest.param(("post", "/submit", {"customer_id": "99999999999999999999999"}), id="huge customer_id"),
-        pytest.param(("get", "/submissions/99999999999999999999999", None), id="huge submission id"),
-    ],
-)
-def test_huge_ids_dont_crash(client, request_):
-    method, url, changes = request_
-    res = submit(client, **changes) if method == "post" else client.get(url)
-    assert res.status_code < 500
+def test_huge_submission_id_is_rejected_not_a_crash(client):
+    assert client.get("/submissions/99999999999999999999999").status_code == 422

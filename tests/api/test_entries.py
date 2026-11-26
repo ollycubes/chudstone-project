@@ -11,7 +11,6 @@ def create_submission(client):
         "/submit",
         data={
             "month": "2026-11",
-            "customer_id": "2",
             "subcategory_id": ["Bus"],
             "amount": ["12.50"],
             "note": ["commute"],
@@ -22,14 +21,15 @@ def create_submission(client):
 
 
 def get_created_entry(client, submission_id):
-    entries = client.get("/entries", params={"customer_id": 2}).json()
+    entries = client.get("/entries").json()
     return next(entry for entry in entries if entry["submissionId"] == submission_id)
 
 
-def test_entries_returns_expected_response_and_filters_by_customer(client):
+def test_entries_returns_expected_response_and_filters_by_persona(client, sign_in):
+    sign_in(2)
     submission_id = create_submission(client)
 
-    response = client.get("/entries", params={"customer_id": 2})
+    response = client.get("/entries")
 
     assert response.status_code == 200
     entry = next(row for row in response.json() if row["submissionId"] == submission_id)
@@ -50,11 +50,9 @@ def test_entries_returns_expected_response_and_filters_by_customer(client):
     assert entry["carbonKg"] == pytest.approx(12.5 * FACTOR["Bus"])
     assert entry["note"] == "commute"
 
-    customer_one_ids = {
-        row["submissionId"]
-        for row in client.get("/entries", params={"customer_id": 1}).json()
-    }
-    assert submission_id not in customer_one_ids
+    sign_in(1)
+    persona_one_ids = {row["submissionId"] for row in client.get("/entries").json()}
+    assert submission_id not in persona_one_ids
 
 
 def test_entry_update_recalculates_and_persists_category_carbon_and_note(client):
@@ -114,7 +112,7 @@ def test_entry_delete_persists_and_missing_entry_returns_404(client):
     assert response.json() == {"status": "deleted", "entryId": entry_id}
     assert all(
         row["entryId"] != entry_id
-        for row in client.get("/entries", params={"customer_id": 2}).json()
+        for row in client.get("/entries").json()
     )
 
     missing = client.delete(f"/entries/{entry_id}")
@@ -127,7 +125,6 @@ def test_entry_delete_only_removes_the_requested_entry(client):
         "/submit",
         data={
             "month": "2026-11",
-            "customer_id": "2",
             "subcategory_id": ["Bus", "Bus"],
             "amount": ["12.50", "25.00"],
             "note": ["first", "second"],
@@ -137,7 +134,7 @@ def test_entry_delete_only_removes_the_requested_entry(client):
     submission_id = response.json()["submissionId"]
     entries = [
         row
-        for row in client.get("/entries", params={"customer_id": 2}).json()
+        for row in client.get("/entries").json()
         if row["submissionId"] == submission_id
     ]
     deleted_entry, remaining_entry = entries
@@ -146,10 +143,6 @@ def test_entry_delete_only_removes_the_requested_entry(client):
 
     assert response.status_code == 200
     assert response.json() == {"status": "deleted", "entryId": deleted_entry["entryId"]}
-    remaining_entries = client.get("/entries", params={"customer_id": 2}).json()
+    remaining_entries = client.get("/entries").json()
     assert any(row["entryId"] == remaining_entry["entryId"] for row in remaining_entries)
 
-
-def test_entries_validates_customer_id_and_unknown_customer_is_empty(client):
-    assert client.get("/entries", params={"customer_id": 0}).status_code == 422
-    assert client.get("/entries", params={"customer_id": 9999}).json() == []

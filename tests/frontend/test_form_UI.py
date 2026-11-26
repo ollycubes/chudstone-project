@@ -16,6 +16,10 @@ def mock_api(page: Page):
         {"customerId": 1, "persona": "Single Professional"},
         {"customerId": 2, "persona": "Family"},
     ]))
+    # no one signed in yet, so the form starts a session for the first persona
+    page.route("**/session", lambda r: r.fulfill(status=401, json={"detail": "Pick a persona first."})
+               if r.request.method == "GET" else
+               r.fulfill(json={"customerId": 1, "persona": "Single Professional"}))
 
 # test 1: checks the first persona name shows up in the header button
 def test_persona_loads_in_header(page: Page):

@@ -8,25 +8,7 @@ from datetime import datetime, timezone
 
 from .database import Base, SessionLocal, engine
 from .models import *
-
-# (submission_id, customer_id, month, category, subcategory, notes, amount)
-SENDSUBMISSIONSSEED = [
-    (1, 1, "2026-10", "Travel", "Self-owned car", None, 280.0),
-    (1, 1, "2026-10", "Travel", "Bus", None, 20.0),
-    (1, 1, "2026-10", "Travel", "Train", None, 63.4),
-    (1, 1, "2026-10", "Food", "Groceries", None, 320.0),
-    (1, 1, "2026-10", "Food", "Delivery", None, 55.94),
-    (1, 1, "2026-10", "Utilities", "Electricity", None, 40.0),
-    (1, 1, "2026-10", "Utilities", "Water", None, 30.0),
-    (1, 1, "2026-10", "Utilities", "Heating", None, 50.0),
-    (2, 2, "2026-10", "Travel", "Self-owned car", None, 300.0),
-    (2, 2, "2026-10", "Travel", "Train", None, 25.0),
-    (2, 2, "2026-10", "Food", "Groceries", None, 250.0),
-    (2, 2, "2026-10", "Food", "Restaurant/Dine out", None, 60.0),
-    (2, 2, "2026-10", "Utilities", "Electricity", None, 35.0),
-    (2, 2, "2026-10", "Utilities", "Water", None, 25.0),
-    (2, 2, "2026-10", "Utilities", "Heating", None, 45.0),
-]
+from .submissionseed import SPENDSUBMISSIONSSEED
 
 CUSTOMERSSEED = [
     (1, "Default"),
@@ -37,8 +19,6 @@ CUSTOMERSSEED = [
     (6, "High Commuter"),
 ]
 
-# Factors in kgCO2e per £ spent, based on Defra 2023 household
-# factors and adjusted using ONS CPI for Jan–Oct 2026.
 CATEGORIESSEED = [
     ("Travel", "Self-owned car", 0.55),
     ("Travel", "Motorbike", 0.35),
@@ -89,7 +69,7 @@ def seed(db):
                 carbon_impact=((float(amount)*100)*(emission_factors[sub]*1000))/100000, date_submitted=now,
                 #carbon_impact=amount*emission_factor but avoids floating point rounding errors
             )
-            for sid, cid, month, cat, sub, notes, amount in SENDSUBMISSIONSSEED
+            for sid, cid, month, cat, sub, notes, amount in SPENDSUBMISSIONSSEED
         )
         db.commit()
         print("db seeded with monthly spend submissions")

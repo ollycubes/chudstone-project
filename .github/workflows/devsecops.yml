@@ -40,11 +40,11 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
-      - name: Run API tests
+      - name: Run unit and API tests
         run: |
           mkdir -p reports
           set -o pipefail
-          pytest tests/api -v --junitxml=reports/pytest.xml | tee reports/pytest.txt
+          pytest tests/unit tests/api -v --junitxml=reports/pytest.xml | tee reports/pytest.txt
       - name: Add results to the run summary
         if: always()
         run: |

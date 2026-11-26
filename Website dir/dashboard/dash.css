@@ -251,7 +251,7 @@ CONTENTS
   }
   .grid-line span {
     position: absolute;
-    right: calc(100% + 0.35rem);
+    right: calc(100% + .35rem);
     top: 0;
     transform: translateY(-50%);
     font-size: .68rem;

@@ -525,8 +525,8 @@ function renderEntryList() {
     btn.type = "button";
     btn.className = "row-edit";
     btn.dataset.id = e.entryId;
-    btn.textContent = "View / edit";
-    btn.setAttribute("aria-label", `View or edit ${e.subcategory}, ${money(e.amount)}`);
+    btn.textContent = "Edit";
+    btn.setAttribute("aria-label", `Edit ${e.subcategory}, ${money(e.amount)}`);
     act.appendChild(btn);
     tr.appendChild(act);
     body.appendChild(tr);
@@ -581,6 +581,25 @@ $("entries-body").addEventListener("click", ev => {
 });
 
 $("entry-cancel").addEventListener("click", () => { clearModalNote(); showList(); });
+
+$("entry-delete").addEventListener("click", async ev => {
+  ev.preventDefault();
+  if (!confirm("Delete this entry? This can't be undone.")) return;
+  const delBtn = $("entry-delete");
+  delBtn.disabled = true;
+  try {
+    const res = await fetch(`/entries/${$("entry-id").value}`, { method: "DELETE" });
+    if (!res.ok) return modalNote("danger", `Could not delete: ${await errorText(res)}`);
+    await loadEntries();
+    fillMonthSelect($("entries-month").value);
+    showList();
+    modalNote("success", "Entry deleted. Your dashboard has been updated.");
+  } catch {
+    modalNote("danger", "Could not reach the server. Is the API running?");
+  } finally {
+    delBtn.disabled = false;
+  }
+});
 
 formView.addEventListener("submit", async ev => {
   ev.preventDefault();

@@ -114,7 +114,7 @@ async function getJSON(url) {
 
 async function loadEntries() {
   try {
-    state.entries = await getJSON(`/entries?${new URLSearchParams({ customer_id: state.customerId })}`);
+    state.entries = await getJSON("/entries");
     clearError();
   } catch {
     state.entries = [];
@@ -181,7 +181,6 @@ function renderChart() {
   const sel = state.months.indexOf(state.selected);
   const svg = svgEl("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "group", "aria-label": "Spending and carbon by month" });
 
-  if (sel >= 0) svg.append(svgEl("rect", { class: "sel-band", x: m.left + band * sel, y: m.top, width: band, height: innerH }));
 
   for (let k = 0; k <= 4; k++) {
     const y = m.top + innerH * (1 - k / 4);
@@ -230,8 +229,7 @@ function renderChart() {
       "aria-label": `${label}. Select to see its recommendations.`, "data-month": ym,
     }));
   });
-  plot.append(svg);
-
+    plot.append(svg);
 }
 
 function selectMonth(ym) {
@@ -346,12 +344,21 @@ function renderRecs() {
   $("add-link").classList.toggle("d-none", state.months.length > 0);
 }
 
+
 /* 6. Personas ------------------------------------------------------------ */
 
-// persona picker, same idea as the dashboard
 const personaBtn = $("persona-btn");
 const personaMenu = $("persona-menu");
 
+// server remebers who we r , GET /entries then returns only that persona's spending
+async function startSession(id) {
+  const body = new FormData();
+  body.append("customer_id", id);
+  const res = await fetch("/session", { method: "POST", body });
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
+// updates page to show new selected persons id
 function setPersona(id, { reload = true } = {}) {
   const p = state.personas.find(x => x.customerId === id);
   if (!p) return;
@@ -367,17 +374,26 @@ function setPersona(id, { reload = true } = {}) {
     b.classList.toggle("active", on);
     b.setAttribute("aria-current", on);
   });
+  // reload the entries if the persona changed
   if (reload && changed) {
     state.selected = null;
-    history.replaceState(null, "", `?customer=${id}`);
+    history.replaceState(null, "", location.pathname);
     loadEntries();
   }
 }
 
-personaMenu.addEventListener("click", e => {
+personaMenu.addEventListener("click", async e => {
   const b = e.target.closest(".dropdown-item");
-  if (b) setPersona(+b.dataset.id);
+  if (!b || +b.dataset.id === state.customerId) return;
+  try {
+    await startSession(+b.dataset.id);
+  } catch {
+    return showError("Couldn't switch persona. Is the API running?");
+  }
+  setPersona(+b.dataset.id);
 });
+
+
 
 
 /* 7. Start up ------------------------------------------------------------ */

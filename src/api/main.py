@@ -231,6 +231,16 @@ def update_entry(
     }
 
 
+@app.delete("/entries/{entry_id}")
+def delete_entry(entry_id: int, db: Session = Depends(get_db)) -> dict:
+    M = MonthlySpendSubmissions
+    row = db.scalar(select(M).where(M.entry_id == entry_id))
+    if row is None:
+        raise HTTPException(404, "Entry not found.")
+    db.delete(row)
+    db.commit()
+    return {"status": "deleted", "entryId": entry_id}
+
 
 def category_totals(db: Session, customer_id: int, month: str | None = None):
     M = MonthlySpendSubmissions

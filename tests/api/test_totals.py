@@ -45,6 +45,16 @@ def test_totals_month_filter(client):
     assert client.get("/totals", params={"month": "2020-01"}).json() == []
 
 
+def test_totals_month_filter_adds_up_per_category(client):
+    data = {r["category"]: r for r in client.get("/totals", params={"month": "2026-10"}).json()}
+    expected = expected_totals(customer_id=1, month="2026-10")
+
+    assert set(data) == set(expected)
+    for cat, (spend, carbon) in expected.items():
+        assert data[cat]["spend"] == pytest.approx(spend, abs=0.01)
+        assert data[cat]["carbon"] == pytest.approx(carbon, abs=0.01)
+
+
 def test_totals_follow_the_signed_in_persona(client, sign_in):
     sign_in(2)
     data = {r["category"]: r for r in client.get("/totals").json()}

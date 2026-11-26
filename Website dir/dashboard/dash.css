@@ -51,14 +51,13 @@ CONTENTS
   #msg { max-width: var(--dash-width); }
   
   .dash-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 19rem;
-    grid-template-areas:
-      "chart    month"
-      "insights month";
-    gap: 1rem;
-    align-items: start;
-  }
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 19rem;
+  grid-template-areas:
+    "chart    month"
+    "insights month";
+  gap: 1rem;
+}
   .chart-card { grid-area: chart; }
   .month-card { grid-area: month; }
   .insights   { grid-area: insights; }
@@ -357,10 +356,17 @@ CONTENTS
   /* ==========================================================================
      7. MONTH PANEL
      ========================================================================== */
-  .month-card {
+    .month-card {
+    height: 100%;
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
     gap: .75rem;
+  }
+
+  .month-card .mini-card {
+    flex: 1 1 auto;
+    justify-content: center;
   }
   .month-nav {
     display: flex;

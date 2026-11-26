@@ -1,6 +1,17 @@
 """Checks the API builds and starts."""
 import importlib
 
+def test_home_redirects_to_dashboard(client):
+    #this checks that when we go home (first start up) it actually takes up to the dash
+    res = client.get("/", follow_redirects=False)
+    assert res.status_code == 307
+    assert res.headers["location"] == "/dashboard/dash.html"
+
+def test_dashboard_route_redirects_to_dashboard_page(client):
+    #this checks that the dashboard actually goes to the dash
+    res = client.get("/dashboard", follow_redirects=False)
+    assert res.status_code == 307
+    assert res.headers["location"] == "/dashboard/dash.html"
 
 def test_api_builds():
     # if there's a syntax error or a missing package this import fails
@@ -13,12 +24,6 @@ def test_api_starts(client):
     res = client.get("/openapi.json")
     assert res.status_code == 200
     assert res.json()["info"]["title"] == "Carbon Footprint & Savings Advisor"
-
-
-def test_home_redirects_to_form(client):
-    res = client.get("/", follow_redirects=False)
-    assert res.status_code == 307
-    assert res.headers["location"] == "/spending-form/form.html"
 
 
 def test_form_page_is_served(client):

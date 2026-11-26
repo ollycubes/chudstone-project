@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -82,7 +81,7 @@
 
         <div class="side-actions">
           <a href="/spending-form/form.html" class="btn btn-next" id="add-link">Add spending</a>
-          <button type="button" class="btn btn-next" id="edit-btn" data-bs-toggle="modal" data-bs-target="#entries-modal">View &amp; edit spending</button>
+          <button type="button" class="btn btn-next" id="edit-btn" data-bs-toggle="modal" data-bs-target="#entries-modal">View or edit spending</button>
           <a href="/recommendations/recommendations.html" class="btn btn-next" id="save-link">Ways to save</a>
         </div>
       </aside>
@@ -119,7 +118,7 @@
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content entries-modal">
       <div class="modal-header">
-        <h2 class="modal-title h6 fw-semibold" id="entries-title">View &amp; edit spending</h2>
+        <h2 class="modal-title h6 fw-semibold" id="entries-title">Edit spending</h2>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
@@ -170,6 +169,7 @@
           <p class="section-note mt-3 mb-0" id="entry-carbon"></p>
           <div class="actions">
             <button type="button" class="btn btn-back" id="entry-cancel">Back to list</button>
+            <button type="button" class="rm-cat" id="entry-delete">Delete entry</button>
             <button type="submit" class="btn btn-confirm" id="entry-save">Save changes</button>
           </div>
         </form>
@@ -179,6 +179,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/dashboard/dash.js"></script>
+<script src="/dashboard/dash.js?v=2"></script>
 </body>
 </html>

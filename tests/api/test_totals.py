@@ -1,14 +1,14 @@
 """Tests for GET /totals (spend and carbon per category)."""
 import pytest
 
-from api.seed import CATEGORIESSEED, SENDSUBMISSIONSSEED
+from api.seed import CATEGORIESSEED, SPENDSUBMISSIONSSEED
 
 FACTOR = {sub: factor for _cat, sub, factor in CATEGORIESSEED}
 
 
 def expected_totals(customer_id, month=None):
     totals = {}
-    for _sid, cid, m, cat, sub, _notes, amount in SENDSUBMISSIONSSEED:
+    for _sid, cid, m, cat, sub, _notes, amount in SPENDSUBMISSIONSSEED:
         if cid == customer_id and (month is None or m == month):
             spend, carbon = totals.get(cat, (0, 0))
             totals[cat] = (spend + amount, carbon + amount * FACTOR[sub])

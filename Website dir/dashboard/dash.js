@@ -2,7 +2,8 @@
    Dashboard
    Data comes from the API:
      GET  /personas, /categories, /submissions/{id}   (existing)
-     GET  /entries?customer_id=   every saved entry for the persona
+     GET  /session, POST /session  which persona is signed in / switch persona (kept in a cookie)
+     GET  /entries                every saved entry for the signed-in persona
      PUT  /entries/{id}           edit one entry (carbon is recalculated by the server)
    Everything on screen (chart, totals, insight cards, savings) is calculated from that one
    entries list by the small pure functions in section 2, so the numbers always agree.
@@ -17,7 +18,7 @@ const CAT_COLOUR = {
   Utilities: "var(--c-utilities)",
 };
 const FALLBACK_COLOUR = "var(--icon-colour)";             // a category the chart doesn't know about
-const STORAGE_KEY = "capstone.customerId";
+const STORAGE_KEY = "capstone.customerId";            // last persona picked, re-used if the server session has expired
 
 const state = {
   customerId: null,
@@ -142,7 +143,7 @@ async function getJSON(url) {
 
 async function loadEntries() {
   try {
-    state.entries = await getJSON(`/entries?${new URLSearchParams({ customer_id: state.customerId })}`);
+    state.entries = await getJSON("/entries");
     clearError();
   } catch {
     state.entries = [];
@@ -455,30 +456,42 @@ function renderInsights() {
 const personaBtn = $("persona-btn");
 const personaMenu = $("persona-menu");
 
-function setPersona(id, { reload = true } = {}) {
+// switching persona = starting a new server session for it; the server then only
+// returns (and lets us change) that persona's spending
+async function startSession(id) {
+  const body = new FormData();
+  body.append("customer_id", id);
+  const res = await fetch("/session", { method: "POST", body });
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
+function showPersona(id) {
   const p = state.personas.find(x => x.customerId === id);
   if (!p) return;
-  const changed = state.customerId !== id;
   state.customerId = id;
   try { sessionStorage.setItem(STORAGE_KEY, id); } catch {}
   personaBtn.textContent = `Example: ${p.persona}`;
   $("persona-footer").textContent = p.persona;
-  $("add-link").href = `/spending-form/form.html?customer=${id}`;
   personaMenu.querySelectorAll(".dropdown-item").forEach(b => {
     const on = +b.dataset.id === id;
     b.classList.toggle("active", on);
     b.setAttribute("aria-current", on);
   });
-  if (reload && changed) {
-    state.selected = null;
-    history.replaceState(null, "", `?customer=${id}`);
-    loadEntries();
-  }
 }
 
-personaMenu.addEventListener("click", e => {
+personaMenu.addEventListener("click", async e => {
   const b = e.target.closest(".dropdown-item");
-  if (b) setPersona(+b.dataset.id);
+  if (!b || +b.dataset.id === state.customerId) return;
+  try {
+    await startSession(+b.dataset.id);
+  } catch {
+    return showError("Couldn't switch persona. Is the API running?");
+  }
+  showPersona(+b.dataset.id);
+  state.selected = null;
+  history.replaceState(null, "", location.pathname);   // drop ?submission= once we've moved on
+  loadEntries();
 });
 
 
@@ -654,29 +667,35 @@ async function init() {
 
   getJSON("/categories").then(c => { state.categories = c; }).catch(() => {});
 
-  // which persona (and month) to show: the submission just made, else ?customer=, else the last one used
+  // which persona: whoever the server session says, else the last one picked, else the first
   let id = null;
+  try {
+    const res = await fetch("/session");
+    if (res.ok) id = (await res.json()).customerId;
+    else if (res.status !== 401) throw new Error(res.status);
+    if (id === null) {
+      let stored = null;
+      try { stored = Number(sessionStorage.getItem(STORAGE_KEY)); } catch {}
+      id = (await startSession(state.personas.some(p => p.customerId === stored) ? stored : state.personas[0].customerId)).customerId;
+    }
+  } catch {
+    return showError("Could not reach the server. Is the API running?");
+  }
+  showPersona(id);
+
+  // which month: the one of the submission just made (it always belongs to the signed-in persona)
   if (submission !== null) {
     if (!/^\d+$/.test(submission)) return showError("No submission selected.");
     try {
       const res = await fetch(`/submissions/${submission}`);
       if (res.status === 404) return showError("We couldn't find that submission.");
       if (!res.ok) return showError(`Server error (${res.status}).`);
-      const data = await res.json();
-      id = data.customerId;
-      state.selected = data.month;
+      state.selected = (await res.json()).month;
     } catch {
       return showError("Could not reach the server. Is the API running?");
     }
   }
-  if (id === null) {
-    let stored = null;
-    try { stored = sessionStorage.getItem(STORAGE_KEY); } catch {}
-    id = [params.get("customer"), stored].map(Number).find(n => state.personas.some(p => p.customerId === n))
-      ?? state.personas[0].customerId;
-  }
 
-  setPersona(id, { reload: false });
   await loadEntries();
 }
 

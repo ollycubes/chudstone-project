@@ -25,7 +25,7 @@ def test_totals_structure(client):
 
 
 def test_totals_add_up_per_category(client):
-    # with no customer_id it defaults to customer 1
+    # the client fixture is signed in as persona 1
     data = {r["category"]: r for r in client.get("/totals").json()}
     expected = expected_totals(customer_id=1)
 
@@ -45,8 +45,9 @@ def test_totals_month_filter(client):
     assert client.get("/totals", params={"month": "2020-01"}).json() == []
 
 
-def test_totals_customer_filter(client):
-    data = {r["category"]: r for r in client.get("/totals", params={"customer_id": 2}).json()}
+def test_totals_follow_the_signed_in_persona(client, sign_in):
+    sign_in(2)
+    data = {r["category"]: r for r in client.get("/totals").json()}
     expected = expected_totals(customer_id=2)
 
     assert set(data) == set(expected)
@@ -55,10 +56,11 @@ def test_totals_customer_filter(client):
         assert data[cat]["carbon"] == pytest.approx(carbon, abs=0.01)
 
 
-def test_totals_unknown_customer_is_empty(client):
-    assert client.get("/totals", params={"customer_id": 9999}).json() == []
+def test_totals_ignore_a_customer_id_in_the_url(client):
+    # the old ?customer_id= no longer picks whose totals you get
+    assert client.get("/totals", params={"customer_id": 2}).json() == client.get("/totals").json()
 
 
-@pytest.mark.parametrize("params", [{"customer_id": 0}, {"customer_id": "abc"}, {"month": "2026-13"}, {"month": "Oct"}])
+@pytest.mark.parametrize("params", [{"month": "2026-13"}, {"month": "Oct"}])
 def test_totals_rejects_bad_params(client, params):
     assert client.get("/totals", params=params).status_code == 422

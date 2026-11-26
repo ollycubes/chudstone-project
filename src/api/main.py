@@ -1,13 +1,17 @@
+import os
+import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Query
+from fastapi import Depends, FastAPI, Form, HTTPException, Query, Request
+from fastapi import Path as PathParam
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -27,12 +31,39 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Carbon Footprint & Savings Advisor", lifespan=lifespan)
 
+# Who is using the app lives in a signed session cookie, never in the URL or form fields,
+# so changing ?customer= or customer_id can't show or change another persona's data.
+# The cookie is signed with SESSION_SECRET: if it isn't set, a random one is made at startup
+# (fine for local dev, but everyone gets signed out whenever the server restarts).
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SESSION_SECRET") or secrets.token_urlsafe(32),
+    session_cookie="chudstone_session",
+    max_age=8 * 60 * 60,  # 8 hours
+    same_site="lax",  # the browser won't send it on another site's POST/PUT/DELETE (blocks CSRF)
+    https_only=os.getenv("SESSION_HTTPS_ONLY") == "1",  # set to 1 when served over https
+)
+
+MAX_ID = 2_147_483_647  # biggest id the databases can store; bigger ones are rejected with a 422
+
+
+def current_customer(request: Request, db: Session = Depends(get_db)) -> Customers:
+    # every endpoint that reads or changes someone's spending gets the customer from here
+    customer_id = request.session.get("customer_id")
+    customer = db.get(Customers, customer_id) if isinstance(customer_id, int) else None
+    if customer is None:
+        request.session.clear()
+        raise HTTPException(401, "Pick a persona first.")
+    return customer
+
+
+CurrentCustomer = Annotated[Customers, Depends(current_customer)]
+
 
 # what the form sends. FastAPI checks the types and limits automatically
 # and replies 422 (with the reason) if anything doesn't fit.
 class SpendingForm(BaseModel):
     month: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$", description="YYYY-MM")
-    customer_id: int = Field(default=1, ge=1, description="the persona picked on the form, until we have a login system")
     subcategory_id: list[str] = Field(min_length=1, max_length=50)
     amount: list[Annotated[Decimal, Field(gt=0, le=1_000_000_000, decimal_places=2)]] = Field(min_length=1, max_length=50)
     # optional, one per entry (blank if the user didn't write one). Same 200 limit as the form's input box
@@ -62,14 +93,39 @@ def personas(db: Session = Depends(get_db)) -> list[dict]:
         for c in db.scalars(select(Customers).order_by(Customers.customer_id))
     ]
 
+# Demo "login": picking a persona stores it in the session. This is the only place a
+# customer id is accepted from the browser, so a real login (checking a password) can
+# replace it later without touching any other endpoint.
+@app.post("/session")
+def start_session(
+    request: Request,
+    customer_id: Annotated[int, Form(ge=1, le=MAX_ID)],
+    db: Session = Depends(get_db),
+) -> dict:
+    customer = db.get(Customers, customer_id)
+    if customer is None:
+        raise HTTPException(422, f"Unknown persona {customer_id}.")
+    request.session.clear()
+    request.session["customer_id"] = customer.customer_id
+    return {"customerId": customer.customer_id, "persona": customer.persona}
+
+@app.get("/session")
+def get_session(customer: CurrentCustomer) -> dict:
+    return {"customerId": customer.customer_id, "persona": customer.persona}
+
+@app.delete("/session")
+def end_session(request: Request) -> dict:
+    request.session.clear()
+    return {"status": "signed out"}
+
 @app.get("/totals")
 def totals(
-    customer_id: Annotated[int, Query(ge=1)] = 1,
+    customer: CurrentCustomer,
     month: Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")] = None,
     db: Session = Depends(get_db),
 ) -> list[dict]:
-    # the dashboard passes the submission's customer and month to get that persona's breakdown
-    rows = category_totals(db, customer_id=customer_id, month=month)
+    # the signed-in persona's breakdown, optionally for one month
+    rows = category_totals(db, customer_id=customer.customer_id, month=month)
     return [
         {"category": rows.category, "spend": round(rows.spend, 2), "carbon": round(rows.carbon, 2)}
         for rows in rows
@@ -86,7 +142,7 @@ def dashboard() -> RedirectResponse:
 
 
 @app.post("/submit", status_code=201)
-def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db)) -> dict:
+def submit(form: Annotated[SpendingForm, Form()], customer: CurrentCustomer, db: Session = Depends(get_db)) -> dict:
     # 1. every card needs a type and an amount (notes are optional)
     if len(form.subcategory_id) != len(form.amount):
         raise HTTPException(422, "each entry needs a type and an amount.")
@@ -95,11 +151,7 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
     if len(notes) != len(form.subcategory_id):
         raise HTTPException(422, "each entry needs a note (it can be blank).")
 
-    # 2. the persona must exist
-    if db.get(Customers, form.customer_id) is None:
-        raise HTTPException(422, f"Unknown persona {form.customer_id}.")
-
-    # 3. look up each subcategory's parent category and emission factor in the db
+    # 2. look up each subcategory's parent category and emission factor in the db
     known = {
         sub: (cat, factor)
         for sub, cat, factor in db.execute(
@@ -111,14 +163,14 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
         if sub not in known:
             raise HTTPException(422, f"Entry {i}: unknown type {sub}.")
 
-    # 4. Save the submission and all its items in one go
+    # 3. Save the submission and all its items in one go
     submission_id = (db.scalar(select(func.max(MonthlySpendSubmissions.submission_id))) or 0) + 1
     now = datetime.now(timezone.utc)
 
     rows = [
         MonthlySpendSubmissions(
             submission_id=submission_id,
-            customer_id=form.customer_id,
+            customer_id=customer.customer_id,
             month=form.month,
             category=known[sub][0],
             subcategory=sub,
@@ -130,27 +182,32 @@ def submit(form: Annotated[SpendingForm, Form()], db: Session = Depends(get_db))
         for sub, amount, note in zip(form.subcategory_id, form.amount, notes)
     ]
 
-    # 5. all saved or none do
+    # 4. all saved or none do
     db.add_all(rows)
     db.commit()
 
     return {"status": "saved", "submissionId": submission_id, "entries": len(rows)}
 
 @app.get("/submissions/{submission_id}")
-def get_submission(submission_id: int, db: Session = Depends(get_db)) -> dict:
+def get_submission(
+    submission_id: Annotated[int, PathParam(ge=1, le=MAX_ID)],
+    customer: CurrentCustomer,
+    db: Session = Depends(get_db),
+) -> dict:
+    # another persona's submission is a 404, so ids can't be used to find out what exists
+    M = MonthlySpendSubmissions
     rows = db.scalars(
-        select(MonthlySpendSubmissions)
-        .where(MonthlySpendSubmissions.submission_id == submission_id)
-        .order_by(MonthlySpendSubmissions.entry_id)
+        select(M)
+        .where(M.submission_id == submission_id, M.customer_id == customer.customer_id)
+        .order_by(M.entry_id)
     ).all()
     if not rows:
         raise HTTPException(404, "Submission not found.")
 
-    customer = db.get(Customers, rows[0].customer_id)
     return {
         "submissionId": submission_id,
-        "customerId": rows[0].customer_id,
-        "persona": customer.persona if customer else None,
+        "customerId": customer.customer_id,
+        "persona": customer.persona,
         "month": rows[0].month,
         "totalSpend": round(sum(r.amount for r in rows), 2),
         "totalCarbonKg": round(sum(r.carbon_impact for r in rows), 2),
@@ -167,14 +224,11 @@ def get_submission(submission_id: int, db: Session = Depends(get_db)) -> dict:
     }
 
 @app.get("/entries")
-def entries(
-    customer_id: Annotated[int, Query(ge=1)] = 1,
-    db: Session = Depends(get_db),
-) -> list[dict]:
+def entries(customer: CurrentCustomer, db: Session = Depends(get_db)) -> list[dict]:
     # dashboard builds chart, totals and insight cards from this list
     M = MonthlySpendSubmissions
     rows = db.scalars(
-        select(M).where(M.customer_id == customer_id).order_by(M.month, M.submission_id, M.entry_id)
+        select(M).where(M.customer_id == customer.customer_id).order_by(M.month, M.submission_id, M.entry_id)
     ).all()
     return [
         {
@@ -193,17 +247,15 @@ def entries(
 
 @app.put("/entries/{entry_id}")
 def update_entry(
-    entry_id: int,
+    entry_id: Annotated[int, PathParam(ge=1, le=MAX_ID)],
+    customer: CurrentCustomer,
     subcategory: Annotated[str, Form()],
     amount: Annotated[Decimal, Form(gt=0, le=1_000_000_000, decimal_places=2)],
     note: Annotated[str, Form(max_length=200)] = "",
     db: Session = Depends(get_db),
 ) -> dict:
-    # edit any saved entry and then category and carbon are calculated again from the edited submission
-    M = MonthlySpendSubmissions
-    row = db.scalar(select(M).where(M.entry_id == entry_id))
-    if row is None:
-        raise HTTPException(404, "Entry not found.")
+    # edit one of the signed-in persona's entries, then category and carbon are calculated again
+    row = own_entry(db, entry_id, customer)
 
     found = db.execute(
         select(Categories.category_name, Categories.emission_factor)
@@ -232,14 +284,24 @@ def update_entry(
 
 
 @app.delete("/entries/{entry_id}")
-def delete_entry(entry_id: int, db: Session = Depends(get_db)) -> dict:
-    M = MonthlySpendSubmissions
-    row = db.scalar(select(M).where(M.entry_id == entry_id))
-    if row is None:
-        raise HTTPException(404, "Entry not found.")
+def delete_entry(
+    entry_id: Annotated[int, PathParam(ge=1, le=MAX_ID)],
+    customer: CurrentCustomer,
+    db: Session = Depends(get_db),
+) -> dict:
+    row = own_entry(db, entry_id, customer)
     db.delete(row)
     db.commit()
     return {"status": "deleted", "entryId": entry_id}
+
+
+def own_entry(db: Session, entry_id: int, customer: Customers) -> MonthlySpendSubmissions:
+    # an entry that doesn't exist and one that belongs to another persona look the same (404)
+    M = MonthlySpendSubmissions
+    row = db.scalar(select(M).where(M.entry_id == entry_id, M.customer_id == customer.customer_id))
+    if row is None:
+        raise HTTPException(404, "Entry not found.")
+    return row
 
 
 def category_totals(db: Session, customer_id: int, month: str | None = None):

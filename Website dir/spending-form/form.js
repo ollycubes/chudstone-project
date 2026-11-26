@@ -171,8 +171,8 @@ document.getElementById("form").addEventListener("submit", async e => {
 
   const body = new FormData();
   body.append("month", form.month.value);
+  // no customer_id: the server saves it for whoever is signed in (the session cookie)
   if (customerId === null) return showMsg("danger", "Personas haven't loaded, so this can't be saved yet.");
-  body.append("customer_id", customerId);
   filled.forEach(r => {
     body.append("subcategory_id", r.querySelector("[name=expense_type]").value);
     body.append("amount", r.querySelector("[name=amount]").value);
@@ -209,18 +209,34 @@ function setPersona(id, name) {
   });
 }
 
+// switching persona starts a new server session for it, so the spending is saved for that persona
+async function startSession(id) {
+  const body = new FormData();
+  body.append("customer_id", id);
+  const res = await fetch("/session", { method: "POST", body });
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
 personaMenu.addEventListener("click", e => {
   const b = e.target.closest(".dropdown-item");
-  if (b) setPersona(+b.dataset.id, b.textContent);
+  if (!b) return;
+  startSession(+b.dataset.id)
+    .then(p => setPersona(p.customerId, p.persona))
+    .catch(() => showMsg("danger", "Couldn't switch persona. Is the API running?"));
 });
 
 fetch("/personas")
   .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
-  .then(list => {
+  .then(async list => {
     if (!list.length) throw new Error("no personas");
     personaMenu.innerHTML = list.map(p =>
       `<li><button type="button" class="dropdown-item" data-id="${p.customerId}">${p.persona}</button></li>`).join("");
-    setPersona(list[0].customerId, list[0].persona);
+    // carry on as whoever is already signed in (e.g. picked on the dashboard), else the first persona
+    const res = await fetch("/session");
+    if (res.status !== 401 && !res.ok) throw new Error(res.status);
+    const p = res.ok ? await res.json() : await startSession(list[0].customerId);
+    setPersona(p.customerId, p.persona);
   })
   .catch(() => {
     personaBtn.textContent = "Example: unavailable";

@@ -7,13 +7,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="/spending-form/form.css" rel="stylesheet">
-<link href="/recommendations/recommendations.css" rel="stylesheet">
+<link href="/recommendations/recommendations.css?v=29" rel="stylesheet">
 </head>
 <body>
 
 <header class="site-header">
   <div class="container-xl d-flex justify-content-between align-items-center">
-    <a href="/dashboard/dash.html" id="home-link" class="brand text-decoration-none"><b>CAPSTONE</b><small>Your money. More impact.</small></a>
+    <a href="/dashboard/dash.html" class="brand text-decoration-none"><b>CAPSTONE</b><small>Your money. More impact.</small></a>
     <div class="dropdown">
       <button type="button" id="persona-btn" class="pill dropdown-toggle"
               data-bs-toggle="dropdown" aria-expanded="false">Example: loading...</button>
@@ -36,7 +36,12 @@
         <h2 id="history-title" class="visually-hidden">Spending and carbon by month</h2>
 
         <div id="history-chart">
-          <ul class="legend" aria-label="Legend">
+          <div class="view-toggle" role="group" aria-label="Graph view">
+            <button type="button" data-view="history" aria-pressed="true">History</button>
+            <button type="button" data-view="projection" aria-pressed="false">Next 12 months</button>
+          </div>
+          <p class="proj-head d-none" id="proj-head"></p>
+          <ul class="legend" id="legend" aria-label="Legend">
             <li>
               <svg viewBox="0 0 30 12" aria-hidden="true"><line class="sw-line spend" x1="1" y1="6" x2="29" y2="6"/><circle class="sw-dot spend" cx="15" cy="6" r="4"/></svg>
               Spending (£)
@@ -57,10 +62,30 @@
         <p class="visually-hidden" id="chart-summary"></p>
       </section>
 
-      <section class="panel recs" aria-labelledby="recs-title">
-        <h2 id="recs-title">Recommendations</h2>
-        <p class="section-note" id="recs-note"></p>
+      <section class="panel summary" aria-label="Your savings">
+        <div class="rec-total d-none" id="rec-total"></div>
+      </section>
+
+      <section class="panel recs" id="recs" aria-labelledby="recs-title">
+        <div class="recs-head">
+          <div>
+            <h2 id="recs-title" tabindex="-1">Recommendations</h2>
+            <p class="recs-sub" id="recs-sub"></p>
+          </div>
+          <span class="recs-count d-none" id="recs-count"></span>
+        </div>
+        <p class="visually-hidden" id="plan-status" role="status"></p>
+        <div class="rec-cols d-none" id="rec-cols">
+          <input type="checkbox" class="form-check-input rec-check" id="pick-all" aria-label="Select all tips">
+          <label for="pick-all" class="rec-cols-tip" aria-hidden="true"><span class="d-sm-none">Select all</span><span class="d-none d-sm-inline">Tip</span></label>
+          <span aria-hidden="true">Money / month</span><span aria-hidden="true">Carbon / month</span>
+        </div>
         <ul class="rec-list" id="rec-list"></ul>
+        <p class="rec-small-none d-none" id="rec-small-none">No big savings this month. The smaller wins below still add up.</p>
+        <details class="rec-small d-none" id="rec-small">
+          <summary><span id="rec-small-title">Smaller wins</span><span class="rec-small-why" id="rec-small-why"></span></summary>
+          <ul class="rec-list" id="rec-list-small"></ul>
+        </details>
         <p class="rec-empty d-none" id="rec-empty"></p>
         <a href="/spending-form/form.html" class="btn btn-next rec-add d-none" id="add-link">Add spending</a>
       </section>
@@ -71,6 +96,6 @@
 <footer>Ways to save <span class="mx-2">/</span> Example data based on the <span id="persona-footer">selected</span> persona</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/recommendations/recommendations.js"></script>
+<script src="/recommendations/recommendations.js?v=29"></script>
 </body>
 </html>

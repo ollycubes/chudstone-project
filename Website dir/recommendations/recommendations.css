@@ -7,7 +7,7 @@ CONTENTS
    5. Recommendations list
    6. Footer
    7. Responsive
-
+   ========================================================================== */
 
    /* 1. TOKENS */
 
@@ -15,7 +15,7 @@ CONTENTS
   --c-spend:  var(--green-hover);
   --c-carbon: var(--navy);
 
-  --ways-width: 60rem;
+  --ways-width: 70rem;   /* wide enough for the graph and the summary box side by side */
 }
 
    /* 2. LAYOUT */
@@ -32,9 +32,10 @@ CONTENTS
 
 #msg { max-width: var(--ways-width); }
 
+/* desktop: graph and summary box side by side, recommendations underneath (tablet and phone stack all three) */
 .ways-grid {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
   gap: 2.5rem;
 }
 
@@ -48,17 +49,42 @@ CONTENTS
   position: relative;
 }
 
-.section-note {
-  font-size: .8rem;
-  color: var(--brownink);
-  margin-bottom: .75rem;
-}
-
 a.btn-next { text-decoration: none; }
 .btn:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
 
 
    /* 4. HISTORY GRAPH */
+
+/* "History | Next 12 months" switch above the graph */
+.view-toggle {
+  display: inline-flex;
+  margin-bottom: .75rem;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--white);
+  border: 1px solid var(--greygreenline);
+}
+.view-toggle button {
+  border: 0;
+  border-radius: 999px;
+  padding: .3rem .9rem;
+  background: none;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--brownink);
+  transition: background-color .15s, color .15s;
+}
+.view-toggle button:hover { color: var(--darkblueink); }
+.view-toggle button[aria-pressed="true"] { background: var(--navy); color: var(--white); }
+.view-toggle button:focus-visible { outline: 3px solid var(--green-hover); outline-offset: 2px; }
+
+.proj-head {                       /* replaces the legend in the Next 12 months view */
+  margin: 0 0 .5rem;
+  font-size: .9rem;
+  color: var(--darkblueink);
+}
+.proj-head .proj-money  { color: var(--green-hover); }
+.proj-head .proj-basis  { display: block; margin-top: .1rem; font-size: .72rem; color: var(--brownink); }
 .legend {
   list-style: none;
   margin: 0 0 .5rem;
@@ -114,6 +140,19 @@ a.btn-next { text-decoration: none; }
 .plot .dot.spend    { fill: var(--c-spend); }
 .plot .dot.carbon   { fill: var(--c-carbon); }
 
+/* "Next 12 months" view: columns of the running total saved */
+.plot .proj-bar              { opacity: .35; }
+.plot .proj-bar.spend        { fill: var(--c-spend); }
+.plot .proj-bar.carbon       { fill: var(--c-carbon); opacity: .25; }
+.plot .proj-bar.last         { opacity: 1; }
+.plot .proj-total            { font-size: 12px; font-weight: 700; }
+.plot .proj-total.spend      { fill: var(--green-hover); }
+.plot .proj-total.carbon     { fill: var(--c-carbon); }
+
+.plot .hit.proj       { cursor: default; }
+.proj-head .proj-carbon { color: var(--c-carbon); }
+.plot .hit.proj:hover { fill: rgba(1, 21, 70, .04); }
+
 .plot .hit                { fill: transparent; cursor: pointer; }
 .plot .hit:hover          { fill: rgba(1, 21, 70, .05); }
 .plot .hit:focus          { outline: none; }
@@ -153,50 +192,288 @@ a.btn-next { text-decoration: none; }
 .tip-sw    { width: .7rem; height: .7rem; border-radius: 2px; }
 .tip-sw.spend  { background: var(--c-spend); }
 .tip-sw.carbon { background: var(--c-carbon); }
+.tip-note { display: block; margin-top: .2rem; font-size: .65rem; font-style: italic; color: var(--brownink); }
 
    /* 5. RECOMMENDATIONS LIST */
 
 .recs {
+  grid-column: 1 / -1;            /* full width, under the graph and summary */
   display: flex;
   flex-direction: column;
+  scroll-margin-top: 1.5rem;      /* a little space above it after "See all recommendations" scrolls here */
 }
 .recs h2 {
   font-size: 1.25rem;
   font-weight: 700;
-  margin: 0 0 .25rem;
+  margin: 0;
 }
+#recs-title:focus { outline: none; }   /* focus is moved here by that button; no box around the heading */
+.summary {
+  display: flex;
+  flex-direction: column;
+}
+
+.recs-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: .5rem 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+/* "3 selected · £15.10 / month": a reminder for when the summary box is scrolled out of view */
+.recs-count {
+  padding: .3rem .75rem;
+  border-radius: 999px;
+  background: var(--lightgreen);
+  color: var(--green-hover);
+  font-size: .78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.recs-sub {
+  margin: .2rem 0 0;
+  font-size: .8rem;
+  color: var(--brownink);
+}
+
+/* the list reads like a table: one bordered block, a row per tip, figures lined up in two columns */
+.rec-cols,
+.rec {
+  display: grid;
+  grid-template-columns: 1.1rem minmax(0, 1fr) 8.5rem 9.5rem;   /* tick | tip | money | carbon */
+  column-gap: 1.25rem;
+  align-items: center;
+}
+.rec-cols {
+  padding: 0 1.25rem .4rem;
+  font-size: .66rem;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--brownink);
+}
+.rec-cols > span { text-align: right; }
+.rec-cols-tip { margin: 0; cursor: pointer; }
 
 .rec-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: .75rem;
-}
-.rec-body {
   background: var(--white);
   border: 1px solid var(--greygreenline);
-  border-radius: var(--radius-small);
-  padding: .75rem .9rem;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+.rec {
+  padding: .9rem 1.25rem;
+  cursor: pointer;                 /* the whole row ticks the tip */
+  transition: background-color .15s, box-shadow .15s;
+}
+.rec + .rec { border-top: 1px solid var(--greygreenline); }
+.rec:hover  { background: #FAFBF7; }
+.rec.picked { background: #F2F9EC; box-shadow: inset 3px 0 0 var(--green-hover); }   /* in "Your plan" */
+
+.rec-check {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  cursor: pointer;
+  border-color: var(--greygreenline);
+}
+.rec-check.form-check-input[type=checkbox]:checked,
+.rec-check.form-check-input[type=checkbox]:indeterminate { background-color: var(--green-hover); border-color: var(--green-hover); }   /* beats Bootstrap's blue */
+.rec-check:focus { border-color: var(--green-hover); box-shadow: 0 0 0 .2rem var(--green-ring); }
+
+.rec-action {
+  margin: 0 0 .3rem;
+  font-size: .95rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--darkblueink);
+}
+.rec-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .15rem .45rem;
+  margin: 0;
+  font-size: .75rem;
+  color: var(--brownink);
+}
+.rec-cat { font-weight: 600; }
+.rec-sep { opacity: .5; }
+.rec-dot {
+  width: .5rem;
+  height: .5rem;
+  border-radius: 50%;
+}
+.rec-dot.cat-travel    { background: #4A78C2; }
+.rec-dot.cat-food      { background: var(--green); }
+.rec-dot.cat-utilities { background: #E0A43A; }
+
+/* the figures sit straight in the row's grid columns, under their headings */
+.rec-figs { display: contents; }
+.rec-fig {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rec-fig-money  { font-size: 1.1rem; font-weight: 700; color: var(--green-hover); }
+.rec-fig-carbon { font-size: .9rem;  font-weight: 600; color: var(--darkblueink); }
+.rec-fig-per {                      /* the column headings say "/ month"; screen readers still hear it */
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.rec-capped {                         /* best-month cap: why this figure is lower than the sheet's */
+  margin: .3rem 0 0;
+  font-size: .72rem;
+  font-style: italic;
   color: var(--brownink);
 }
 
-.rec-tag {
-  display: block;
-  font-size: .68rem;
+.rec-fig-note {
+  grid-column: 3 / 5;
+  text-align: right;
+  font-size: .75rem;
+  font-style: italic;
+  color: var(--brownink);
 }
 
-.rec-action {
+/* summary box: the total for every tip (or the ticked ones); fills the panel beside the graph */
+.rec-total {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  border-radius: var(--radius-small);
+  background: var(--navy);
+  color: var(--white);
+}
+.rec-total .rec-saving-label {
   display: block;
-  margin: .15rem 0;
+  margin-bottom: .25rem;
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--lime);
+}
+.rec-total-figures {
+  display: flex;
+  flex-direction: column;
+}
+.rec-total .rec-money  { font-size: 2.75rem; font-weight: 700; line-height: 1.1; color: var(--lime); }
+.rec-total .rec-carbon { font-size: 1.35rem; font-weight: 700; }
+.rec-total .rec-per    { font-size: .8rem; opacity: .85; }
+
+.rec-total-breakdown {
+  list-style: none;
+  margin: 2.75rem 0 0;   /* clear space between the headline total and the per-category breakdown */
+  padding: 0;
+  font-size: .8rem;
+}
+.rec-total-breakdown li {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  gap: .75rem;
+  padding: .35rem 0;
+  border-top: 1px solid rgba(255, 255, 255, .15);
+}
+.rec-total-breakdown b    { font-weight: 700; color: var(--lime); text-align: right; }
+.rec-total-breakdown span:last-child { text-align: right; }
+
+.rec-total-detail {               /* quieter than the figures above it */
+  margin: .75rem 0 1.25rem;        /* the bottom margin is the least space above the button */
+  font-size: .68rem;
+  line-height: 1.5;
+  opacity: .6;
+}
+.rec-total-detail span { display: block; }
+
+/* bottom of the box: "Clear selection" (only once tips are ticked) and the button down to the tips */
+.rec-total-actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: .5rem;
+}
+.rec-total-clear {
+  align-self: center;
+  padding: .2rem .5rem;
+  border: 0;
+  background: none;
+  color: var(--white);
+  font-size: .75rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: .8;
+}
+.rec-total-clear:hover { opacity: 1; }
+.rec-total-clear:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; border-radius: 2px; }
+
+/* "See all 8 recommendations" button */
+.rec-total-jump {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: .5rem;
+  padding: .6rem 1rem;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--navy);
+  font-size: .85rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color .15s;
+}
+.rec-total-jump:hover  { background: var(--green); color: var(--navy); }
+.rec-total-jump:focus-visible { outline: 3px solid var(--lime); outline-offset: 3px; }
+.rec-total-jump-arrow { transition: transform .15s; }
+.rec-total-jump:hover .rec-total-jump-arrow { transform: translateY(2px); }
+
+/* "Smaller wins": tips under the minimum saving, closed by default */
+.rec-small { margin-top: .75rem; }
+.rec-small > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .1rem .75rem;
+  padding: .55rem 1.25rem;
+  border: 1px dashed var(--greygreenline);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  list-style: none;
   font-size: .85rem;
   font-weight: 600;
   color: var(--darkblueink);
 }
-.rec-basis {
-  display: block;
-  font-size: .68rem;
+.rec-small > summary::-webkit-details-marker { display: none; }
+.rec-small > summary::before {             /* chevron: points right when closed, down when open */
+  content: "";
+  align-self: center;
+  width: .45rem;
+  height: .45rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform .15s;
+}
+.rec-small[open] > summary::before { transform: rotate(45deg); }
+.rec-small > summary:hover { background: #FAFBF7; }
+.rec-small > summary:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+.rec-small-why { font-size: .72rem; font-weight: 400; color: var(--brownink); }
+.rec-small[open] > summary { margin-bottom: .5rem; }
+
+.rec-small-none {
+  margin: 0;
+  font-size: .85rem;
+  color: var(--brownink);
 }
 
 .rec-empty {
@@ -212,21 +489,31 @@ footer { max-width: var(--ways-width); }
 
    /* 7. RESPONSIVE */
 
-@media (min-width: 992px) {              /* desktop: the list scrolls so both cards stay the same height */
-  .rec-list {
-    max-height: 22rem;   /* roughly the height of the graph card */
-    overflow-y: auto;
-  }
-}
-
-@media (max-width: 991.98px) {           /* tablet: recommendations move under the graph */
+@media (max-width: 991.98px) {           /* tablet and phone: graph, summary and recommendations stack */
   .ways-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 1rem;
+    gap: 1.5rem;
   }
 }
 
 @media (max-width: 575.98px) {           /* phone */
   .panel { padding: 1rem; }
-  .plot  { height: 18rem; }
+  .plot  { height: 16rem; }
+  .rec-total .rec-money { font-size: 2.25rem; }
+
+  /* rows stack: tip, details, then the two figures side by side with "a month" shown */
+  .rec-cols { grid-template-columns: 1.1rem minmax(0, 1fr); padding: 0 1rem .5rem; }   /* just "Select all" */
+  .rec-cols > span { display: none; }
+  .rec { grid-template-columns: 1.1rem minmax(0, 1fr); align-items: start; padding: .85rem 1rem; }
+  .rec-check { margin-top: .15rem; }
+  .rec-figs {
+    grid-column: 2;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 .75rem;
+    margin-top: .5rem;
+  }
+  .rec-fig-per { position: static; width: auto; height: auto; clip: auto; font-size: .72rem; color: var(--brownink); }
+  .rec-fig-note { text-align: left; }
 }

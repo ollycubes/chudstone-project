@@ -112,9 +112,18 @@ async function getJSON(url) {
   return res.json();
 }
 
+// demo "login": the server keeps the persona in the session cookie, and /entries reads it from there
+async function startSession(id) {
+  const body = new FormData();
+  body.append("customer_id", id);
+  const res = await fetch("/session", { method: "POST", body });
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
 async function loadEntries() {
   try {
-    state.entries = await getJSON(`/entries?${new URLSearchParams({ customer_id: state.customerId })}`);
+    state.entries = await getJSON("/entries");
     clearError();
   } catch {
     state.entries = [];
@@ -338,10 +347,17 @@ function renderRecs() {
   const rules = b ? relevantRules(b) : [];
 
   $("recs-note").textContent = ym
-    ? `Based on your spending in ${monthName(ym)}. ${state.months.length > 1 ? "Select a month on the graph to change it." : ""}`
+    ? `Based on your spending in ${monthName(ym)}.${state.months.length > 1 ? " Select a month on the graph to change it." : ""}`
     : "";
   recList.replaceChildren(...rules.map(r => recCard(r, ym, b.bySub[r.subcategory])));
 
+  // no month at all, a month with no entries (a gap), or a month where no rule applies
+  const text = !ym ? "No spending yet. Add a month to get recommendations."
+    : !b ? `No spending recorded in ${monthName(ym)}.`
+    : rules.length ? ""
+    : `Nothing to suggest for ${monthName(ym)} yet.`;
+  const empty = $("rec-empty");
+  empty.textContent = text;
   empty.classList.toggle("d-none", !text);
   $("add-link").classList.toggle("d-none", state.months.length > 0);
 }
@@ -352,10 +368,10 @@ function renderRecs() {
 const personaBtn = $("persona-btn");
 const personaMenu = $("persona-menu");
 
-function setPersona(id, { reload = true } = {}) {
+// updates the header, footer and links for the persona the server session is signed in as
+function showPersona(id) {
   const p = state.personas.find(x => x.customerId === id);
   if (!p) return;
-  const changed = state.customerId !== id;
   state.customerId = id;
   try { sessionStorage.setItem(STORAGE_KEY, id); } catch {}
   personaBtn.textContent = `Example: ${p.persona}`;
@@ -367,16 +383,21 @@ function setPersona(id, { reload = true } = {}) {
     b.classList.toggle("active", on);
     b.setAttribute("aria-current", on);
   });
-  if (reload && changed) {
-    state.selected = null;
-    history.replaceState(null, "", `?customer=${id}`);
-    loadEntries();
-  }
 }
 
-personaMenu.addEventListener("click", e => {
+// switching persona signs the session in as them first, otherwise /entries keeps returning the old one
+personaMenu.addEventListener("click", async e => {
   const b = e.target.closest(".dropdown-item");
-  if (b) setPersona(+b.dataset.id);
+  if (!b || +b.dataset.id === state.customerId) return;
+  try {
+    await startSession(+b.dataset.id);
+  } catch {
+    return showError("Couldn't switch persona. Is the API running?");
+  }
+  showPersona(+b.dataset.id);
+  state.selected = null;
+  history.replaceState(null, "", location.pathname);
+  loadEntries();
 });
 
 
@@ -401,12 +422,23 @@ async function init() {
     return li;
   }));
 
-  let stored = null;
-  try { stored = sessionStorage.getItem(STORAGE_KEY); } catch {}
-  const id = [new URLSearchParams(window.location.search).get("customer"), stored].map(Number)
-    .find(n => state.personas.some(p => p.customerId === n)) ?? state.personas[0].customerId;
+  // which persona: whoever the server session says, else the last one picked, else the first
+  let id = null;
+  try {
+    const res = await fetch("/session");
+    if (res.ok) id = (await res.json()).customerId;
+    else if (res.status !== 401) throw new Error(res.status);
+    if (id === null) {
+      let stored = null;
+      try { stored = Number(sessionStorage.getItem(STORAGE_KEY)); } catch {}
+      const pick = state.personas.some(p => p.customerId === stored) ? stored : state.personas[0].customerId;
+      id = (await startSession(pick)).customerId;
+    }
+  } catch {
+    return showError("Could not reach the server. Is the API running?");
+  }
 
-  setPersona(id, { reload: false });
+  showPersona(id);
   await loadEntries();
 }
 

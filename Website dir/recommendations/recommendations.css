@@ -173,7 +173,25 @@ a.btn-next { text-decoration: none; }
   margin: 0 0 .25rem;
 }
 
-.recs-head { margin-bottom: 1rem; }
+.recs-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: .5rem 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+/* "3 selected · £15.10 / month": a reminder for when the summary box is scrolled out of view */
+.recs-count {
+  padding: .3rem .75rem;
+  border-radius: 999px;
+  background: var(--lightgreen);
+  color: var(--green-hover);
+  font-size: .78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .recs-head h2 { margin: 0; }
 .recs-sub {
   margin: .2rem 0 0;
@@ -185,8 +203,8 @@ a.btn-next { text-decoration: none; }
 .rec-cols,
 .rec {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 8.5rem 9.5rem;
-  column-gap: 1.5rem;
+  grid-template-columns: 1.1rem minmax(0, 1fr) 8.5rem 9.5rem;   /* tick | tip | money | carbon */
+  column-gap: 1.25rem;
   align-items: center;
 }
 .rec-cols {
@@ -197,7 +215,8 @@ a.btn-next { text-decoration: none; }
   text-transform: uppercase;
   color: var(--brownink);
 }
-.rec-cols span + span { text-align: right; }
+.rec-cols > span { text-align: right; }
+.rec-cols-tip { margin: 0; cursor: pointer; }
 
 .rec-list {
   list-style: none;
@@ -210,10 +229,23 @@ a.btn-next { text-decoration: none; }
 }
 .rec {
   padding: .9rem 1.25rem;
-  transition: background-color .15s;
+  cursor: pointer;                 /* the whole row ticks the tip */
+  transition: background-color .15s, box-shadow .15s;
 }
 .rec + .rec { border-top: 1px solid var(--greygreenline); }
 .rec:hover  { background: #FAFBF7; }
+.rec.picked { background: #F2F9EC; box-shadow: inset 3px 0 0 var(--green-hover); }   /* in "Your plan" */
+
+.rec-check {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  cursor: pointer;
+  border-color: var(--greygreenline);
+}
+.rec-check.form-check-input[type=checkbox]:checked,
+.rec-check.form-check-input[type=checkbox]:indeterminate { background-color: var(--green-hover); border-color: var(--green-hover); }   /* beats Bootstrap's blue */
+.rec-check:focus { border-color: var(--green-hover); box-shadow: 0 0 0 .2rem var(--green-ring); }
 
 .rec-action {
   margin: 0 0 .3rem;
@@ -259,7 +291,7 @@ a.btn-next { text-decoration: none; }
   white-space: nowrap;
 }
 .rec-fig-note {
-  grid-column: 2 / 4;
+  grid-column: 3 / 5;
   text-align: right;
   font-size: .75rem;
   font-style: italic;
@@ -325,9 +357,30 @@ a.btn-next { text-decoration: none; }
 }
 .rec-total-detail span { display: block; }
 
-/* "See all 8 recommendations" button: sits at the bottom of the box, in the space under the figures */
-.rec-total-jump {
+/* bottom of the box: "Clear selection" (only once tips are ticked) and the button down to the tips */
+.rec-total-actions {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: .5rem;
+}
+.rec-total-clear {
+  align-self: center;
+  padding: .2rem .5rem;
+  border: 0;
+  background: none;
+  color: var(--white);
+  font-size: .75rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: .8;
+}
+.rec-total-clear:hover { opacity: 1; }
+.rec-total-clear:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; border-radius: 2px; }
+
+/* "See all 8 recommendations" button */
+.rec-total-jump {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -376,9 +429,12 @@ footer { max-width: var(--ways-width); }
   .rec-total .rec-money { font-size: 2.25rem; }
 
   /* rows stack: tip, details, then the two figures side by side with "a month" shown */
-  .rec-cols { display: none; }
-  .rec { grid-template-columns: minmax(0, 1fr); padding: .85rem 1rem; }
+  .rec-cols { grid-template-columns: 1.1rem minmax(0, 1fr); padding: 0 1rem .5rem; }   /* just "Select all" */
+  .rec-cols > span { display: none; }
+  .rec { grid-template-columns: 1.1rem minmax(0, 1fr); align-items: start; padding: .85rem 1rem; }
+  .rec-check { margin-top: .15rem; }
   .rec-figs {
+    grid-column: 2;
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;

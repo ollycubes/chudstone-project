@@ -64,7 +64,9 @@ function netRates(rule) {
 function savingFor(rule, spend) {
   if (rule.perTrip) return null;
   const r = netRates(rule);
-  return { spend: spend * r.spend, carbon: spend * r.carbon };
+  // rounded to the penny (and 0.01 kg) here, so totals always equal the figures shown on each row
+  const round2 = n => Math.round(n * 100) / 100;
+  return { spend: round2(spend * r.spend), carbon: round2(spend * r.carbon) };
 }
 
 // add thresholds lin but we can dicsuss
@@ -77,7 +79,19 @@ const state = {
   byMonth: {},       
   months: [],         
   selected: null,    
+  picked: new Set(),  // subcategories whose tip is ticked ("Your plan"), remembered per persona
 };
+
+// the plan is saved in this browser per persona, so ticks survive a reload or a change of month
+const planKey = () => `capstone.plan.${state.customerId}`;
+function loadPlan() {
+  let saved = [];
+  try { saved = JSON.parse(localStorage.getItem(planKey())) || []; } catch {}
+  state.picked = new Set(saved);
+}
+function savePlan() {
+  try { localStorage.setItem(planKey(), JSON.stringify([...state.picked])); } catch {}
+}
 
 const $ = id => document.getElementById(id);
 
@@ -378,9 +392,19 @@ function make(tag, cls, text) {
 //   left   the tip, then its category, subcategory and what was spent there
 //   right  what it saves a month, in £ and kg CO₂e, lined up under the column headings
 // screen readers hear e.g. "… Could save £7.74 and 4.26 kg CO₂e a month"
-function recCard(rule, spend) {
+function recCard(rule, spend, i) {
   const li = make("li", "rec");
   li.dataset.sub = rule.subcategory;
+
+  // tick to add this tip to "Your plan"; the tip text is its label
+  const on = state.picked.has(rule.subcategory);
+  li.classList.toggle("picked", on);
+  const box = make("input", "form-check-input rec-check");
+  box.type = "checkbox";
+  box.checked = on;
+  box.dataset.sub = rule.subcategory;
+  box.setAttribute("aria-labelledby", `rec-action-${i}`);
+  box.setAttribute("aria-describedby", `rec-meta-${i} rec-figs-${i}`);
 
   const main = make("div", "rec-main");
   const meta = make("p", "rec-meta");
@@ -393,10 +417,14 @@ function recCard(rule, spend) {
     make("span", "", `${money(spend)} spent`),
   );
   meta.querySelectorAll(".rec-dot, .rec-sep").forEach(n => n.setAttribute("aria-hidden", "true"));
-  main.append(make("p", "rec-action", rule.action), meta);
+  const action = make("p", "rec-action", rule.action);
+  action.id = `rec-action-${i}`;
+  meta.id = `rec-meta-${i}`;
+  main.append(action, meta);
 
   const s = savingFor(rule, spend);
   const figs = make("div", "rec-figs");
+  figs.id = `rec-figs-${i}`;
   if (s) {
     figs.append(
       make("span", "visually-hidden", "Could save "),
@@ -410,7 +438,7 @@ function recCard(rule, spend) {
     figs.append(make("span", "rec-fig-note", "Depends on the flight and train fares for your trip"));
   }
 
-  li.append(main, figs);
+  li.append(box, main, figs);
   return li;
 }
 
@@ -427,8 +455,8 @@ function renderRecs() {
   const rules = b ? relevantRules(b) : [];
 
   const sorted = b ? [...rules].sort(bySaving(b)) : [];
-  recList.replaceChildren(...sorted.map(r => recCard(r, b.bySub[r.subcategory])));
-  renderTotal(rules, ym, b);
+  recList.replaceChildren(...sorted.map((r, i) => recCard(r, b.bySub[r.subcategory], i)));
+  renderPlan();   // ticks, the count by the heading and the summary box
 
   // one line under the heading says the month once, instead of on every row
   $("recs-sub").textContent = rules.length
@@ -447,74 +475,160 @@ function renderRecs() {
   $("add-link").classList.toggle("d-none", state.months.length > 0);
 }
 
-// the most you could save by following every tip shown. Each tip applies to a different
-// subcategory's spending, so the savings don't overlap and can simply be added up.
-// Tips without a monthly figure (Airplane) can't be added, so they're mentioned instead.
-function renderTotal(rules, ym, b) {
+/* Ticking tips ("Your plan")
+   Tick the tips you'll use. The summary box beside the graph shows the most you could save
+   until something is ticked, then switches to the total for just the ticked tips.
+   Each tip is about a different subcategory, so savings never overlap and simply add up. */
+
+// every tip in the list for the selected month, with its monthly saving (null for Airplane)
+function shownRows() {
+  const b = state.byMonth[state.selected];
+  return [...recList.querySelectorAll(".rec")].map(li => {
+    const rule = RULES.find(r => r.subcategory === li.dataset.sub);
+    return { li, rule, s: savingFor(rule, b.bySub[rule.subcategory]) };
+  });
+}
+const isPicked = x => state.picked.has(x.rule.subcategory);
+
+// adds up a set of rows; tips without a monthly figure (Airplane) are counted separately
+function sumSavings(rows) {
+  const counted = rows.filter(x => x.s);
+  return {
+    counted,
+    spend: counted.reduce((t, x) => t + x.s.spend, 0),
+    carbon: counted.reduce((t, x) => t + x.s.carbon, 0),
+    flights: rows.length - counted.length,
+  };
+}
+
+// after any change: ticks and highlights, the select-all box, the count by the heading, the summary
+function renderPlan() {
+  const rows = shownRows();
+  const picked = rows.filter(isPicked);
+  rows.forEach(x => {
+    x.li.classList.toggle("picked", isPicked(x));
+    x.li.querySelector(".rec-check").checked = isPicked(x);
+  });
+
+  const all = $("pick-all");
+  all.checked = rows.length > 0 && picked.length === rows.length;
+  all.indeterminate = picked.length > 0 && picked.length < rows.length;
+
+  // small reminder by the heading, for when the summary box is scrolled out of view
+  const t = sumSavings(picked);
+  const count = $("recs-count");
+  count.classList.toggle("d-none", !picked.length);
+  count.textContent = picked.length ? `${picked.length} selected · ${money(t.spend)} / month` : "";
+
+  renderTotal();
+}
+
+// tells screen reader users what the new total is (only when they tick, not on every redraw)
+function announcePlan() {
+  const picked = shownRows().filter(isPicked), t = sumSavings(picked);
+  $("plan-status").textContent = picked.length
+    ? `Your plan: ${picked.length} ${picked.length === 1 ? "tip" : "tips"}, saving ${money(t.spend)} and ${carbonKg(t.carbon)} a month.`
+    : "No tips selected. The summary shows the most you could save.";
+}
+
+function setPicked(rows, on) {
+  rows.forEach(x => on ? state.picked.add(x.rule.subcategory) : state.picked.delete(x.rule.subcategory));
+  savePlan();
+  renderPlan();
+  announcePlan();
+}
+
+recList.addEventListener("change", e => {
+  const box = e.target.closest(".rec-check");
+  if (!box) return;
+  box.checked ? state.picked.add(box.dataset.sub) : state.picked.delete(box.dataset.sub);
+  savePlan();
+  renderPlan();
+  announcePlan();
+});
+// clicking anywhere on a row ticks it, not just the small box
+recList.addEventListener("click", e => {
+  if (e.target.closest(".rec-check")) return;
+  e.target.closest(".rec")?.querySelector(".rec-check").click();
+});
+$("pick-all").addEventListener("change", e => setPicked(shownRows(), e.target.checked));
+
+
+/* Summary box (beside the graph)
+   Nothing ticked: "If you follow all 8 tips below you could save £29.83"
+   Some ticked:    "Your plan · 3 of 8 tips saves £15.10 … out of £29.83 possible" */
+function renderTotal() {
   const box = $("rec-total");
+  const ym = state.selected, b = ym ? state.byMonth[ym] : null;
   box.classList.toggle("d-none", !b);           // no month at all: the recommendations panel explains why
   if (!b) return box.replaceChildren();
 
-  const counted = rules
-    .map(rule => ({ rule, s: savingFor(rule, b.bySub[rule.subcategory]) }))
-    .filter(x => x.s);
-  if (!counted.length) {
+  const rows = shownRows();
+  const picked = rows.filter(isPicked);
+  const planning = picked.length > 0;
+  const all = sumSavings(rows);
+  const t = planning ? sumSavings(picked) : all;
+  if (!planning && !all.counted.length) {
     return box.replaceChildren(make("span", "rec-total-detail", `No savings to add up for ${monthName(ym)} yet.`));
   }
+  box.classList.toggle("planning", planning);
 
-  const spend = counted.reduce((t, x) => t + x.s.spend, 0);
-  const carbon = counted.reduce((t, x) => t + x.s.carbon, 0);
-  const share = n => (n * 100).toLocaleString("en-GB", { maximumFractionDigits: 1 }) + "%";
+  const label = planning
+    ? `Your plan · ${picked.length} of ${rows.length} tips saves`
+    : rows.length === 1 ? "If you follow the tip below you could save" : `If you follow all ${rows.length} tips below you could save`;
 
-  // headline: the total for every tip
+  // headline: the total
   const figures = make("div", "rec-total-figures");
   figures.append(
-    make("span", "rec-money", money(spend)),
+    make("span", "rec-money", money(t.spend)),
     make("span", "visually-hidden", " and "),
-    make("span", "rec-carbon", carbonKg(carbon)),
-    make("span", "rec-per", "a month"),
+    make("span", "rec-carbon", carbonKg(t.carbon)),
+    make("span", "rec-per", planning ? `a month, out of ${money(all.spend)} possible` : "a month"),
   );
 
   // where it comes from: one line per category (Travel, Food, Utilities)
-  const byCat = new Map();
-  for (const { rule, s } of counted) {
-    const c = byCat.get(rule.category) || { spend: 0, carbon: 0 };
-    byCat.set(rule.category, { spend: c.spend + s.spend, carbon: c.carbon + s.carbon });
-  }
   const breakdown = make("ul", "rec-total-breakdown");
   breakdown.setAttribute("aria-label", "Savings by category");
-  for (const [cat, c] of byCat) {
+  for (const cat of [...new Set(RULES.map(r => r.category))]) {
+    const inCat = t.counted.filter(x => x.rule.category === cat);
+    if (!inCat.length) continue;
+    const c = sumSavings(inCat);
     const li = make("li", "");
     li.append(make("span", "", cat), make("b", "", money(c.spend)), make("span", "", carbonKg(c.carbon)));
     breakdown.append(li);
   }
 
   // two short lines rather than one long sentence, so they don't wrap in the narrow box
+  const share = n => (n * 100).toLocaleString("en-GB", { maximumFractionDigits: 1 }) + "%";
   const detail = make("div", "rec-total-detail");
   detail.append(
-    make("span", "", `${share(spend / b.spend)} of your ${money(b.spend)} spending`),
-    make("span", "", `${share(carbon / b.carbon)} of your carbon in ${monthName(ym)}`),
+    make("span", "", `${share(t.spend / b.spend)} of your ${money(b.spend)} spending`),
+    make("span", "", `${share(t.carbon / b.carbon)} of your carbon in ${monthName(ym)}`),
   );
-  if (counted.length < rules.length) detail.append(make("span", "", "Flight savings aren't included because they depend on fares."));
+  if (t.flights) detail.append(make("span", "", "Flight savings aren't included because they depend on fares."));
 
-  box.replaceChildren(
-    make("span", "rec-saving-label",
-      counted.length === 1 ? "If you follow the tip below you could save" : `If you follow all ${counted.length} tips below you could save`),
-    figures,
-    breakdown,
-    detail,
-    jumpLink(rules.length),
-  );
+  const actions = make("div", "rec-total-actions");
+  if (planning) {
+    const clear = make("button", "rec-total-clear", "Clear selection");
+    clear.type = "button";
+    clear.addEventListener("click", () => setPicked(rows, false));
+    actions.append(clear);
+  }
+  actions.append(jumpLink(rows.length, planning));
+
+  box.replaceChildren(make("span", "rec-saving-label", label), figures, breakdown, detail, actions);
 }
 
-// button at the bottom of the summary that takes you down to the cards.
+// button at the bottom of the summary that takes you down to the tips.
 // It's a real link to #recs, so it still works without JavaScript; with it, it scrolls smoothly
 // and moves keyboard focus to the Recommendations heading.
-function jumpLink(count) {
-  const a = make("a", "rec-total-jump", count === 1 ? "See the recommendation" : `See all ${count} recommendations`);
+function jumpLink(count, planning) {
+  const text = planning ? "Change your tips" : count === 1 ? "See the recommendation" : `See all ${count} recommendations`;
+  const a = make("a", "rec-total-jump", text);
   a.href = "#recs";
-  a.append(make("span", "rec-total-jump-arrow", "↓"));
-  a.querySelector(".rec-total-jump-arrow").setAttribute("aria-hidden", "true");
+  const arrow = make("span", "rec-total-jump-arrow", "↓");
+  arrow.setAttribute("aria-hidden", "true");
+  a.append(arrow);
   a.addEventListener("click", e => {
     e.preventDefault();
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -535,6 +649,7 @@ function showPersona(id) {
   const p = state.personas.find(x => x.customerId === id);
   if (!p) return;
   state.customerId = id;
+  loadPlan();
   try { sessionStorage.setItem(STORAGE_KEY, id); } catch {}
   personaBtn.textContent = `Example: ${p.persona}`;
   $("persona-footer").textContent = p.persona;

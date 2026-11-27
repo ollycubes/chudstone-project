@@ -15,7 +15,7 @@ CONTENTS
   --c-spend:  var(--green-hover);
   --c-carbon: var(--navy);
 
-  --ways-width: 60rem;
+  --ways-width: 70rem;   /* a little wider than before, so the side column has room for the cards */
 }
 
    /* 2. LAYOUT */
@@ -32,6 +32,7 @@ CONTENTS
 
 #msg { max-width: var(--ways-width); }
 
+/* desktop: graph and recommendations side by side (tablet and phone stack them, see 7. Responsive) */
 .ways-grid {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -174,30 +175,69 @@ a.btn-next { text-decoration: none; }
   flex-direction: column;
   gap: .75rem;
 }
+
+/* each tip: what to do and why on top, a green band with what it saves underneath.
+   When the list is full width (tablet) the band becomes a column on the right, see 7. Responsive */
 .rec-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   background: var(--white);
   border: 1px solid var(--greygreenline);
   border-radius: var(--radius-small);
-  padding: .75rem .9rem;
   color: var(--brownink);
+  overflow: hidden;
 }
+.rec-text { padding: .8rem 1rem; }
 
 .rec-tag {
   display: block;
   font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
 }
-
 .rec-action {
   display: block;
-  margin: .15rem 0;
-  font-size: .85rem;
+  margin: .2rem 0 .3rem;
+  font-size: .95rem;
   font-weight: 600;
+  line-height: 1.35;
   color: var(--darkblueink);
 }
 .rec-basis {
   display: block;
-  font-size: .68rem;
+  font-size: .75rem;
 }
+
+.rec-saving {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 .5rem;
+  padding: .5rem 1rem;
+  background: var(--lightgreen);
+  color: var(--darkblueink);
+}
+.rec-saving-label {
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--brownink);
+}
+.rec-money {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--green-hover);
+}
+.rec-carbon {
+  font-size: .85rem;
+  font-weight: 700;
+}
+.rec-per { font-size: .72rem; }
+.rec-saving.muted { background: var(--lightblueink); }
+.rec-saving.muted .rec-per { margin-top: .15rem; }
 
 .rec-empty {
   font-size: .85rem;
@@ -212,21 +252,40 @@ footer { max-width: var(--ways-width); }
 
    /* 7. RESPONSIVE */
 
-@media (min-width: 992px) {              /* desktop: the list scrolls so both cards stay the same height */
+@media (min-width: 992px) {              /* desktop: the list scrolls so the two panels stay the same height */
+  .recs {
+    height: 0;             /* the graph panel sets the row height... */
+    min-height: 100%;      /* ...and this panel stretches to match it */
+  }
   .rec-list {
-    max-height: 22rem;   /* roughly the height of the graph card */
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
+    padding-right: .25rem; /* keeps the scrollbar off the card borders */
   }
 }
 
-@media (max-width: 991.98px) {           /* tablet: recommendations move under the graph */
+@media (max-width: 991.98px) {           /* tablet and phone: recommendations move under the graph */
   .ways-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 1rem;
+    gap: 1.5rem;
   }
+}
+
+@media (min-width: 576px) and (max-width: 991.98px) {   /* tablet: cards are wide, so savings get their own column */
+  .rec-body { grid-template-columns: minmax(0, 1fr) 11rem; }
+  .rec-saving {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: flex-end;
+    text-align: right;
+    padding: .8rem 1rem;
+  }
+  .rec-money { font-size: 1.35rem; }
 }
 
 @media (max-width: 575.98px) {           /* phone */
   .panel { padding: 1rem; }
-  .plot  { height: 18rem; }
+  .plot  { height: 16rem; }
 }

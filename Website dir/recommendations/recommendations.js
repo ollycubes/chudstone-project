@@ -10,20 +10,62 @@
 
 const STORAGE_KEY = "capstone.customerId";
 
+// Each rule comes from the recommendations scenario sheet:
+//   factor   stakeholder emission factor, kg CO₂e per £ (same values as the categories table in seed.py)
+//   gross    share of the month's spend in that subcategory the action avoids
+//   replace  food swaps only: share of the avoided spend that goes on groceries and cooking electricity instead
+//   perTrip  the saving depends on fares for one trip, so there is no monthly figure (Airplane)
 const RULES = [
-  { category: "Travel", subcategory: "Self-owned car", action: "Combine two errands into one drive." },
-  { category: "Travel", subcategory: "Motorbike", action: "Combine short errands into one ride." },
-  { category: "Travel", subcategory: "Bus", action: "Walk one short trip you usually pay a bus fare for." },
-  { category: "Travel", subcategory: "Train", action: "Combine two visits into one train trip." },
-  { category: "Travel", subcategory: "Subway", action: "Walk a short Underground trip." },
-  { category: "Travel", subcategory: "Carshare", action: "Coordinate a shared errand you would otherwise make on separate trips." },
-  { category: "Food", subcategory: "Groceries", action: "Make one meal a week with food you already have." },
-  { category: "Food", subcategory: "Delivery", action: "Swap one planned takeaway for a batch-cooked meal." },
-  { category: "Food", subcategory: "Restaurant/Dine out", action: "Swap one planned meal out for a home-cooked meal." },
-  { category: "Utilities", subcategory: "Electricity", action: "Air-dry one load you would normally tumble-dry each week." },
-  { category: "Utilities", subcategory: "Water", action: "Shorten regular showers if your water is metered." },
-  { category: "Utilities", subcategory: "Heating", action: "Adjust the timer for a regular period when your home is empty." },
+  { category: "Travel", subcategory: "Self-owned car", factor: 0.55, gross: 0.03,
+    action: "Walk or cycle a nearby errand you'd normally drive to, or combine two errands into one drive." },
+  { category: "Travel", subcategory: "Motorbike", factor: 0.35, gross: 0.04,
+    action: "Walk a shorter errand you'd normally ride to, or group two stops into one ride." },
+  { category: "Travel", subcategory: "Bus", factor: 0.20, gross: 0.05,
+    action: "Walk or cycle a short trip you'd normally pay a bus fare for, if the route suits you." },
+  { category: "Travel", subcategory: "Train", factor: 0.15, gross: 0.05,
+    action: "Put two visits on the same day so you can make one train trip and avoid buying a separate ticket." },
+  { category: "Travel", subcategory: "Subway", factor: 0.12, gross: 0.04,
+    action: "Walk a short Underground journey, if it's convenient and would lower the fare you pay." },
+  { category: "Travel", subcategory: "Taxi", factor: 0.45, gross: 0.10,
+    action: "Walk a short journey you'd normally take by taxi, if the route suits you." },
+  { category: "Travel", subcategory: "Carshare", factor: 0.28, gross: 0.04,
+    action: "Plan two shared errands for the same drive, so the car makes one fewer trip." },
+  { category: "Travel", subcategory: "Airplane", factor: 1.10, perTrip: true,
+    action: "Compare a train with a flight for an upcoming trip where both options work for you." },
+  { category: "Food", subcategory: "Groceries", factor: 0.20, gross: 0.03,
+    action: "Check your cupboards before shopping and plan one meal around food you already have." },
+  { category: "Food", subcategory: "Delivery", factor: 0.38, gross: 0.15, replace: { groceries: 0.40, cooking: 0.05 },
+    action: "Batch-cook an extra portion for a night you'd usually order a takeaway." },
+  { category: "Food", subcategory: "Restaurant/Dine out", factor: 0.32, gross: 0.10, replace: { groceries: 0.35, cooking: 0.05 },
+    action: "Swap a planned meal out for a comparable home-cooked meal." },
+  { category: "Utilities", subcategory: "Electricity", factor: 0.30, gross: 0.03,
+    action: "Air-dry a few loads you'd normally tumble-dry, if you have a suitable place to dry them." },
+  { category: "Utilities", subcategory: "Water", factor: 0.15, gross: 0.03,
+    action: "If your water is metered, try a slightly shorter shower on several days each week." },
+  { category: "Utilities", subcategory: "Heating", factor: 0.45, gross: 0.04,
+    action: "If your heating system supports it, check the timer for a regular period when the home is empty." },
 ];
+
+// factors for what the food swaps spend instead (sheet: "Replacement inputs")
+const REPLACEMENT_FACTOR = { groceries: 0.20, cooking: 0.30 };
+
+// net rates per £ of eligible spend (sheet columns H and I):
+//   spend:  gross × (1 − groceries share − cooking share)
+//   carbon: gross × (factor − groceries share × 0.20 − cooking share × 0.30)
+function netRates(rule) {
+  const g = rule.replace?.groceries ?? 0, c = rule.replace?.cooking ?? 0;
+  return {
+    spend: rule.gross * (1 - g - c),
+    carbon: rule.gross * (rule.factor - g * REPLACEMENT_FACTOR.groceries - c * REPLACEMENT_FACTOR.cooking),
+  };
+}
+
+// the monthly saving for one card, or null when it can't be worked out monthly
+function savingFor(rule, spend) {
+  if (rule.perTrip) return null;
+  const r = netRates(rule);
+  return { spend: spend * r.spend, carbon: spend * r.carbon };
+}
 
 // add thresholds lin but we can dicsuss
 const CATEGORY_THRESHOLD = { Travel: 0, Food: 0, Utilities: 0 };
@@ -44,6 +86,8 @@ const $ = id => document.getElementById(id);
 
 const money = n => "£" + Number(n).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const kg = n => Number(n).toLocaleString("en-GB", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " kg CO₂e";
+// savings are often under 1 kg, so these keep two decimals (0.14 kg rather than 0.1 kg)
+const carbonKg = n => Number(n).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " kg CO₂e";
 const tick = n => Number(n.toFixed(2)).toLocaleString("en-GB");
 
 function monthName(ym) {
@@ -91,9 +135,13 @@ function axisScale(max) {
 }
 
 // the flowchart: the category is above its threshold and the subcategory has spending
+// and (from the sheet) the card is only shown when both net savings are positive
 function relevantRules(b) {
-  return RULES.filter(rule =>
-    b.byCat[rule.category] > CATEGORY_THRESHOLD[rule.category] && b.bySub[rule.subcategory] > 0);
+  return RULES.filter(rule => {
+    if (!(b.byCat[rule.category] > CATEGORY_THRESHOLD[rule.category] && b.bySub[rule.subcategory] > 0)) return false;
+    const s = savingFor(rule, b.bySub[rule.subcategory]);
+    return s === null || (s.spend > 0 && s.carbon > 0);
+  });
 }
 
 
@@ -329,12 +377,34 @@ function recCard(rule, ym, spend) {
   const li = make("li", "rec");
   li.dataset.sub = rule.subcategory;
 
+  // left: what to do and why; right: what it saves
   const body = make("div", "rec-body");
-  body.append(
+  const text = make("div", "rec-text");
+  text.append(
     make("span", "rec-tag", `${rule.category} · ${rule.subcategory}`),
     make("span", "rec-action", rule.action),
     make("span", "rec-basis", `Based on ${money(spend)} spent on ${rule.subcategory} in ${monthName(ym)}`),
   );
+
+  const s = savingFor(rule, spend);
+  const saving = make("div", "rec-saving");
+  if (s) {
+    // screen readers hear "Could save £7.74 and 4.26 kg CO₂e a month"
+    saving.append(
+      make("span", "rec-saving-label", "Could save"),
+      make("span", "rec-money", money(s.spend)),
+      make("span", "visually-hidden", " and "),
+      make("span", "rec-carbon", carbonKg(s.carbon)),
+      make("span", "rec-per", " a month"),
+    );
+  } else {
+    saving.classList.add("muted");
+    saving.append(
+      make("span", "rec-saving-label", "Savings"),
+      make("span", "rec-per", "Depend on the flight and train fares for your trip"),
+    );
+  }
+  body.append(text, saving);
 
   li.append(body);
   return li;

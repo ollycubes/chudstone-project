@@ -35,7 +35,7 @@ CONTENTS
 /* desktop: graph and recommendations side by side (tablet and phone stack them, see 7. Responsive) */
 .ways-grid {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
   gap: 2.5rem;
 }
 
@@ -157,11 +157,17 @@ a.btn-next { text-decoration: none; }
 
    /* 5. RECOMMENDATIONS LIST */
 
+/* graph | summary on the top row, the recommendation cards across the full width underneath */
 .recs {
+  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
 }
-.recs h2 {
+.summary {
+  display: flex;
+  flex-direction: column;
+}
+.recs h2, .summary h2 {
   font-size: 1.25rem;
   font-weight: 700;
   margin: 0 0 .25rem;
@@ -239,6 +245,50 @@ a.btn-next { text-decoration: none; }
 .rec-saving.muted { background: var(--lightblueink); }
 .rec-saving.muted .rec-per { margin-top: .15rem; }
 
+/* the total for every tip: sits above the list, so it stays in view while the list scrolls */
+/* the total for every tip: fills the summary panel beside the graph */
+.rec-total {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.25rem;
+  border-radius: var(--radius-small);
+  background: var(--navy);
+  color: var(--white);
+}
+.rec-total .rec-saving-label { color: var(--lime); display: block; margin-bottom: .25rem; }
+.rec-total-figures {
+  display: flex;
+  flex-direction: column;
+}
+.rec-total .rec-money  { font-size: 2.75rem; line-height: 1.1; color: var(--lime); }
+.rec-total .rec-carbon { font-size: 1.35rem; }
+.rec-total .rec-per    { font-size: .8rem; opacity: .85; }
+
+.rec-total-breakdown {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  font-size: .8rem;
+}
+.rec-total-breakdown li {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  gap: .75rem;
+  padding: .35rem 0;
+  border-top: 1px solid rgba(255, 255, 255, .15);
+}
+.rec-total-breakdown b    { font-weight: 700; color: var(--lime); text-align: right; }
+.rec-total-breakdown span:last-child { text-align: right; }
+
+.rec-total-detail {
+  display: block;
+  margin-top: .75rem;
+  font-size: .75rem;
+  opacity: .85;
+}
+
 .rec-empty {
   font-size: .85rem;
   color: var(--brownink);
@@ -252,27 +302,14 @@ footer { max-width: var(--ways-width); }
 
    /* 7. RESPONSIVE */
 
-@media (min-width: 992px) {              /* desktop: the list scrolls so the two panels stay the same height */
-  .recs {
-    height: 0;             /* the graph panel sets the row height... */
-    min-height: 100%;      /* ...and this panel stretches to match it */
-  }
-  .rec-list {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: .25rem; /* keeps the scrollbar off the card borders */
-  }
-}
-
-@media (max-width: 991.98px) {           /* tablet and phone: recommendations move under the graph */
+@media (max-width: 991.98px) {           /* tablet and phone: graph, summary and recommendations stack */
   .ways-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 1.5rem;
   }
 }
 
-@media (min-width: 576px) and (max-width: 991.98px) {   /* tablet: cards are wide, so savings get their own column */
+@media (min-width: 576px) {              /* cards are wide enough for savings to get their own column */
   .rec-body { grid-template-columns: minmax(0, 1fr) 11rem; }
   .rec-saving {
     flex-direction: column;
@@ -288,4 +325,5 @@ footer { max-width: var(--ways-width); }
 @media (max-width: 575.98px) {           /* phone */
   .panel { padding: 1rem; }
   .plot  { height: 16rem; }
+  .rec-total .rec-money { font-size: 2.25rem; }
 }

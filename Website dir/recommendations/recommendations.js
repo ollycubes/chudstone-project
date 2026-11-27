@@ -366,14 +366,16 @@ new ResizeObserver(renderChart).observe(plot);
 
 const recList = $("rec-list");
 
+// small helper for building the cards and the total
+function make(tag, cls, text) {
+  const node = document.createElement(tag);
+  node.className = cls;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
 // builds one recommendation card
 function recCard(rule, ym, spend) {
-  const make = (tag, cls, text) => {
-    const node = document.createElement(tag);
-    node.className = cls;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  };
   const li = make("li", "rec");
   li.dataset.sub = rule.subcategory;
 
@@ -420,6 +422,7 @@ function renderRecs() {
     ? `Based on your spending in ${monthName(ym)}.${state.months.length > 1 ? " Select a month on the graph to change it." : ""}`
     : "";
   recList.replaceChildren(...rules.map(r => recCard(r, ym, b.bySub[r.subcategory])));
+  renderTotal(rules, ym, b);
 
   // no month at all, a month with no entries (a gap), or a month where no rule applies
   const text = !ym ? "No spending yet. Add a month to get recommendations."
@@ -430,6 +433,61 @@ function renderRecs() {
   empty.textContent = text;
   empty.classList.toggle("d-none", !text);
   $("add-link").classList.toggle("d-none", state.months.length > 0);
+}
+
+// the most you could save by following every tip shown. Each tip applies to a different
+// subcategory's spending, so the savings don't overlap and can simply be added up.
+// Tips without a monthly figure (Airplane) can't be added, so they're mentioned instead.
+function renderTotal(rules, ym, b) {
+  const box = $("rec-total");
+  box.classList.toggle("d-none", !b);           // no month at all: the recommendations panel explains why
+  if (!b) return box.replaceChildren();
+
+  const counted = rules
+    .map(rule => ({ rule, s: savingFor(rule, b.bySub[rule.subcategory]) }))
+    .filter(x => x.s);
+  if (!counted.length) {
+    return box.replaceChildren(make("span", "rec-total-detail", `No savings to add up for ${monthName(ym)} yet.`));
+  }
+
+  const spend = counted.reduce((t, x) => t + x.s.spend, 0);
+  const carbon = counted.reduce((t, x) => t + x.s.carbon, 0);
+  const share = n => (n * 100).toLocaleString("en-GB", { maximumFractionDigits: 1 }) + "%";
+
+  // headline: the total for every tip
+  const figures = make("div", "rec-total-figures");
+  figures.append(
+    make("span", "rec-money", money(spend)),
+    make("span", "visually-hidden", " and "),
+    make("span", "rec-carbon", carbonKg(carbon)),
+    make("span", "rec-per", "a month"),
+  );
+
+  // where it comes from: one line per category, in the same order as the cards
+  const byCat = new Map();
+  for (const { rule, s } of counted) {
+    const c = byCat.get(rule.category) || { spend: 0, carbon: 0 };
+    byCat.set(rule.category, { spend: c.spend + s.spend, carbon: c.carbon + s.carbon });
+  }
+  const breakdown = make("ul", "rec-total-breakdown");
+  breakdown.setAttribute("aria-label", "Savings by category");
+  for (const [cat, c] of byCat) {
+    const li = make("li", "");
+    li.append(make("span", "", cat), make("b", "", money(c.spend)), make("span", "", carbonKg(c.carbon)));
+    breakdown.append(li);
+  }
+
+  const detail = make("span", "rec-total-detail",
+    `That's ${share(spend / b.spend)} of your ${money(b.spend)} spending and ${share(carbon / b.carbon)} of your carbon in ${monthName(ym)}.`);
+  if (counted.length < rules.length) detail.append(" Flight savings aren't included because they depend on fares.");
+
+  box.replaceChildren(
+    make("span", "rec-saving-label",
+      counted.length === 1 ? "If you follow the tip below you could save" : `If you follow all ${counted.length} tips below you could save`),
+    figures,
+    breakdown,
+    detail,
+  );
 }
 
 /* 6. Personas ------------------------------------------------------------ */

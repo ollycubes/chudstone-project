@@ -60,6 +60,37 @@ a.btn-next { text-decoration: none; }
 
 
    /* 4. HISTORY GRAPH */
+
+/* "History | Next 12 months" switch above the graph */
+.view-toggle {
+  display: inline-flex;
+  margin-bottom: .75rem;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--white);
+  border: 1px solid var(--greygreenline);
+}
+.view-toggle button {
+  border: 0;
+  border-radius: 999px;
+  padding: .3rem .9rem;
+  background: none;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--brownink);
+  transition: background-color .15s, color .15s;
+}
+.view-toggle button:hover { color: var(--darkblueink); }
+.view-toggle button[aria-pressed="true"] { background: var(--navy); color: var(--white); }
+.view-toggle button:focus-visible { outline: 3px solid var(--green-hover); outline-offset: 2px; }
+
+.proj-head {                       /* replaces the legend in the Next 12 months view */
+  margin: 0 0 .5rem;
+  font-size: .9rem;
+  color: var(--darkblueink);
+}
+.proj-head .proj-money  { color: var(--green-hover); }
+.proj-head .proj-basis  { display: block; margin-top: .1rem; font-size: .72rem; color: var(--brownink); }
 .legend {
   list-style: none;
   margin: 0 0 .5rem;
@@ -115,6 +146,19 @@ a.btn-next { text-decoration: none; }
 .plot .dot.spend    { fill: var(--c-spend); }
 .plot .dot.carbon   { fill: var(--c-carbon); }
 
+/* "Next 12 months" view: columns of the running total saved */
+.plot .proj-bar              { opacity: .35; }
+.plot .proj-bar.spend        { fill: var(--c-spend); }
+.plot .proj-bar.carbon       { fill: var(--c-carbon); opacity: .25; }
+.plot .proj-bar.last         { opacity: 1; }
+.plot .proj-total            { font-size: 12px; font-weight: 700; }
+.plot .proj-total.spend      { fill: var(--green-hover); }
+.plot .proj-total.carbon     { fill: var(--c-carbon); }
+
+.plot .hit.proj       { cursor: default; }
+.proj-head .proj-carbon { color: var(--c-carbon); }
+.plot .hit.proj:hover { fill: rgba(1, 21, 70, .04); }
+
 .plot .hit                { fill: transparent; cursor: pointer; }
 .plot .hit:hover          { fill: rgba(1, 21, 70, .05); }
 .plot .hit:focus          { outline: none; }
@@ -154,6 +198,7 @@ a.btn-next { text-decoration: none; }
 .tip-sw    { width: .7rem; height: .7rem; border-radius: 2px; }
 .tip-sw.spend  { background: var(--c-spend); }
 .tip-sw.carbon { background: var(--c-carbon); }
+.tip-note { display: block; margin-top: .2rem; font-size: .65rem; font-style: italic; color: var(--brownink); }
 
    /* 5. RECOMMENDATIONS LIST */
 

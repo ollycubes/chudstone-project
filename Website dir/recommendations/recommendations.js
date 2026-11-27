@@ -121,6 +121,7 @@ const state = {
   months: [],         
   selected: null,    
   picked: new Set(),  // subcategories whose tip is ticked ("Your plan"), remembered per persona
+  view: "history",    // graph view: "history" or "projection" (Next 12 months)
 };
 
 // the plan is saved in this browser per persona, so ticks survive a reload or a change of month
@@ -264,7 +265,78 @@ function svgEl(name, attrs = {}, ...kids) {
   return node;
 }
 
-// draws the whole graph
+/* The graph has two views, switched by the "History | Next 12 months" buttons above it:
+     History          spending and carbon for each month you've entered (select a month here)
+     Next 12 months   what the savings in the summary box add up to over the coming year,
+                      month by month: all tips, or just the ticked ones */
+const PROJECTION_MONTHS = 12;
+
+function addMonths(ym, k) {
+  const [y, m] = ym.split("-").map(Number);
+  const d = new Date(y, m - 1 + k);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// the savings the summary box shows for the selected month, worked out without needing the list
+function planSaving() {
+  const ym = state.selected, b = ym ? state.byMonth[ym] : null;
+  if (!b) return null;
+  const rows = relevantRules(b).map(rule => ({ rule, s: monthSaving(rule, ym) }));
+  const picked = rows.filter(isPicked);
+  const t = sumSavings(picked.length ? picked : rows);
+  return { spend: t.spend, carbon: t.carbon, planning: picked.length > 0, count: (picked.length || rows.length) };
+}
+
+// running totals for the next 12 months, starting the month after your latest one
+function projection() {
+  const plan = planSaving();
+  if (!plan || !(plan.spend > 0)) return null;
+  const last = state.months[state.months.length - 1];
+  return {
+    plan,
+    months: Array.from({ length: PROJECTION_MONTHS }, (_, k) => addMonths(last, k + 1)),
+    spend: Array.from({ length: PROJECTION_MONTHS }, (_, k) => round2(plan.spend * (k + 1))),
+    carbon: Array.from({ length: PROJECTION_MONTHS }, (_, k) => round2(plan.carbon * (k + 1))),
+  };
+}
+const tipsPhrase = plan => plan.planning
+  ? `your ${plan.count} chosen ${plan.count === 1 ? "tip" : "tips"}`
+  : plan.count === 1 ? "this tip" : `all ${plan.count} tips`;
+
+// shared drawing helpers
+function chartFrame(ticksLeft, ticksRight) {
+  const W = plot.clientWidth, H = plot.clientHeight;
+  if (!W || !H) return null;
+  const m = {
+    top: 10,
+    bottom: 28,
+    left: Math.max(...ticksLeft.map(t => t.length)) * 6.5 + 14,
+    right: ticksRight ? Math.max(...ticksRight.map(t => t.length)) * 6.5 + 14 : 16,
+  };
+  const innerW = W - m.left - m.right, innerH = H - m.top - m.bottom;
+  return innerW > 0 ? { W, H, m, innerW, innerH } : null;
+}
+function drawGrid(svg, f, ticksLeft, ticksRight) {
+  const { W, m, innerH } = f;
+  for (let k = 0; k <= 4; k++) {
+    const y = m.top + innerH * (1 - k / 4);
+    if (k) svg.append(svgEl("line", { class: "grid", x1: m.left, x2: W - m.right, y1: y, y2: y }));
+    svg.append(svgEl("text", { x: m.left - 8, y, "text-anchor": "end", "dominant-baseline": "middle" }, ticksLeft[k]));
+    if (ticksRight) svg.append(svgEl("text", { x: W - m.right + 8, y, "text-anchor": "start", "dominant-baseline": "middle" }, ticksRight[k]));
+  }
+  svg.append(svgEl("path", { class: "axis", d: `M${m.left} ${m.top}V${m.top + innerH}H${W - m.right}${ticksRight ? `V${m.top}` : ""}` }));
+}
+function drawMonthLabels(svg, f, months, band, xAt, sel) {
+  const n = months.length;
+  const multiYear = months[0].slice(0, 4) !== months[n - 1].slice(0, 4);
+  const every = Math.max(1, Math.ceil((multiYear ? 54 : 36) / band));
+  months.forEach((ym, i) => {
+    if ((n - 1 - i) % every) return;
+    svg.append(svgEl("text", { class: i === sel ? "month sel" : "month", x: xAt(i), y: f.m.top + f.innerH + 18, "text-anchor": "middle" }, monthShort(ym, multiYear)));
+  });
+}
+
+// draws whichever view is chosen
 function renderChart() {
   const hasData = state.months.length > 0;
   $("history-chart").classList.toggle("d-none", !hasData);
@@ -273,9 +345,15 @@ function renderChart() {
   hideTip();
   if (!hasData) return;
 
-  const W = plot.clientWidth, H = plot.clientHeight;
-  if (!W || !H) return;
+  const projecting = state.view === "projection";
+  $("legend").classList.toggle("d-none", projecting);
+  $("proj-head").classList.toggle("d-none", !projecting);
+  document.querySelectorAll(".view-toggle button").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === state.view));
+  projecting ? renderProjection() : renderHistory();
+}
 
+function renderHistory() {
+  $("chart-summary").textContent = "";
   const n = state.months.length;
   const spend = state.months.map(ym => state.byMonth[ym]?.spend ?? null);
   const carbon = state.months.map(ym => state.byMonth[ym]?.carbon ?? null);
@@ -284,15 +362,9 @@ function renderChart() {
   const sTicks = [0, 1, 2, 3, 4].map(k => "£" + tick(S.step * k));
   const cTicks = [0, 1, 2, 3, 4].map(k => tick(C.step * k) + " kg");
 
-  const m = {
-    top: 10,
-    bottom: 28,
-    left: Math.max(...sTicks.map(t => t.length)) * 6.5 + 14,
-    right: Math.max(...cTicks.map(t => t.length)) * 6.5 + 14,
-  };
-  const innerW = W - m.left - m.right, innerH = H - m.top - m.bottom;
-  if (innerW <= 0) return;
-
+  const f = chartFrame(sTicks, cTicks);
+  if (!f) return;
+  const { W, H, m, innerW, innerH } = f;
   const band = innerW / n;
   const xAt = i => m.left + band * (i + 0.5);
   const yAt = (v, axis) => m.top + innerH * (1 - v / axis.top);
@@ -300,23 +372,8 @@ function renderChart() {
   const svg = svgEl("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "group", "aria-label": "Spending and carbon by month" });
 
   if (sel >= 0) svg.append(svgEl("rect", { class: "sel-band", x: m.left + band * sel, y: m.top, width: band, height: innerH }));
-
-  for (let k = 0; k <= 4; k++) {
-    const y = m.top + innerH * (1 - k / 4);
-    if (k) svg.append(svgEl("line", { class: "grid", x1: m.left, x2: W - m.right, y1: y, y2: y }));
-    svg.append(
-      svgEl("text", { x: m.left - 8, y, "text-anchor": "end", "dominant-baseline": "middle" }, sTicks[k]),
-      svgEl("text", { x: W - m.right + 8, y, "text-anchor": "start", "dominant-baseline": "middle" }, cTicks[k]),
-    );
-  }
-  svg.append(svgEl("path", { class: "axis", d: `M${m.left} ${m.top}V${m.top + innerH}H${W - m.right}V${m.top}` }));
-
-  const multiYear = state.months[0].slice(0, 4) !== state.months[n - 1].slice(0, 4);
-  const every = Math.max(1, Math.ceil((multiYear ? 54 : 36) / band));
-  state.months.forEach((ym, i) => {
-    if ((n - 1 - i) % every) return;
-    svg.append(svgEl("text", { class: i === sel ? "month sel" : "month", x: xAt(i), y: m.top + innerH + 18, "text-anchor": "middle" }, monthShort(ym, multiYear)));
-  });
+  drawGrid(svg, f, sTicks, cTicks);
+  drawMonthLabels(svg, f, state.months, band, xAt, sel);
 
   // a month with no data breaks the line instead of being drawn as zero
   const line = (values, axis, cls) => {
@@ -349,7 +406,70 @@ function renderChart() {
     }));
   });
   plot.append(svg);
+}
 
+// "Next 12 months": a column per month showing the running total saved by then
+function renderProjection() {
+  const p = state.proj = projection();
+  const head = $("proj-head");
+  if (!p) {
+    head.textContent = "Select a month with savings on the History view to see what they'd add up to.";
+    $("chart-summary").textContent = "";
+    return;
+  }
+  const end = p.months[p.months.length - 1];
+  head.replaceChildren(
+    `With ${tipsPhrase(p.plan)} you'd save about `,
+    make("b", "proj-money", money(p.spend[p.spend.length - 1])),
+    " and ",
+    make("b", "proj-carbon", kg(p.carbon[p.carbon.length - 1])),
+    ` by ${monthName(end)}`,
+    make("span", "proj-basis", `${money(p.plan.spend)} and ${kg(p.plan.carbon)} a month, based on ${monthName(state.selected)}`),
+  );
+  $("chart-summary").textContent = head.textContent;
+
+  const top = p.spend[p.spend.length - 1], topKg = p.carbon[p.carbon.length - 1];
+  const A = axisScale(top), K = axisScale(topKg);
+  const ticks = [0, 1, 2, 3, 4].map(k => "£" + tick(A.step * k));
+  const kTicks = [0, 1, 2, 3, 4].map(k => tick(K.step * k) + " kg");
+  const f = chartFrame(ticks, kTicks);
+  if (!f) return;
+  const { W, H, m, innerW, innerH } = f;
+  const n = p.months.length;
+  const band = innerW / n;
+  const xAt = i => m.left + band * (i + 0.5);
+  const yAt = (v, axis = A) => m.top + innerH * (1 - v / axis.top);
+  const svg = svgEl("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "group", "aria-label": "Savings building up over the next 12 months" });
+
+  drawGrid(svg, f, ticks, kTicks);
+  drawMonthLabels(svg, f, p.months, band, xAt, -1);
+
+  // a pair of columns per month: money (left axis) and carbon (right axis)
+  const gw = Math.min(band * 0.72, 46), bw = gw / 2 - 1.5;
+  const bar = (v, axis, cls, i, dx) => {
+    const y = yAt(v, axis);
+    svg.append(svgEl("rect", { class: `proj-bar ${cls}${i === n - 1 ? " last" : ""}`, x: xAt(i) + dx, y, width: bw, height: m.top + innerH - y, rx: 2 }));
+  };
+  p.months.forEach((_, i) => {
+    bar(p.spend[i], A, "spend", i, -gw / 2);
+    bar(p.carbon[i], K, "carbon", i, 1.5);
+  });
+  // the year's totals, stacked above the last pair of columns
+  const yTop = Math.min(yAt(top), yAt(topKg, K));
+  const rx = xAt(n - 1) + gw / 2;
+  svg.append(
+    svgEl("text", { class: "proj-total spend", x: rx, y: yTop - 22, "text-anchor": "end" }, money(top)),
+    svgEl("text", { class: "proj-total carbon", x: rx, y: yTop - 8, "text-anchor": "end" }, kg(topKg)),
+  );
+
+  p.months.forEach((ym, i) => {
+    svg.append(svgEl("rect", {
+      class: "hit proj", x: m.left + band * i, y: m.top, width: band, height: innerH + m.bottom,
+      tabindex: 0, role: "img", "data-month": ym, "data-proj": i,
+      "aria-label": `By ${monthName(ym)}: ${money(p.spend[i])} and ${kg(p.carbon[i])} saved.`,
+    }));
+  });
+  plot.append(svg);
 }
 
 function selectMonth(ym) {
@@ -363,8 +483,9 @@ function selectMonth(ym) {
 
 // for when u hover over the lines, appears with the carbon and spending values
 
-function showTip(ym, x, y) {
-  const b = state.byMonth[ym];
+function showTip(hit, x, y) {
+  const ym = hit.dataset.month, projIndex = hit.dataset.proj;
+  const b = projIndex !== undefined ? null : state.byMonth[ym];
   const row = (cls, label, value) => {
     const r = document.createElement("span");
     r.className = "tip-row";
@@ -379,7 +500,14 @@ function showTip(ym, x, y) {
   head.className = "tip-month";
   head.textContent = monthName(ym);
 
-  if (b) {
+  if (projIndex !== undefined) {
+    const p = state.proj, i = Number(projIndex);
+    head.textContent = `By ${monthName(ym)}`;
+    const note = document.createElement("span");
+    note.className = "tip-note";
+    note.textContent = `Saved with ${tipsPhrase(p.plan)}`;
+    tip.replaceChildren(head, row("spend", "Money", money(p.spend[i])), row("carbon", "Carbon", kg(p.carbon[i])), note);
+  } else if (b) {
     tip.replaceChildren(head, row("spend", "Spending", money(b.spend)), row("carbon", "Carbon", kg(b.carbon)));
   } else {
     const none = document.createElement("span");
@@ -399,28 +527,33 @@ function hideTip() { tip.hidden = true; }
 
 plot.addEventListener("mousemove", e => {
   const hit = e.target.closest(".hit");
-  if (hit) showTip(hit.dataset.month, e.clientX, e.clientY); else hideTip();
+  if (hit) showTip(hit, e.clientX, e.clientY); else hideTip();
 });
 plot.addEventListener("mouseleave", hideTip);
 plot.addEventListener("focusin", e => {
   const hit = e.target.closest(".hit");
   if (!hit) return hideTip();
   const r = hit.getBoundingClientRect();
-  showTip(hit.dataset.month, r.left + r.width / 2, r.top + 24);
+  showTip(hit, r.left + r.width / 2, r.top + 24);
 });
 plot.addEventListener("focusout", hideTip);
 plot.addEventListener("click", e => {
   const hit = e.target.closest(".hit");
-  if (hit) selectMonth(hit.dataset.month);
+  if (hit && hit.dataset.proj === undefined) selectMonth(hit.dataset.month);   // projected months can't be selected
 });
 plot.addEventListener("keydown", e => {
-  if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("hit")) {
+  if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("hit") && e.target.dataset.proj === undefined) {
     e.preventDefault();
     selectMonth(e.target.dataset.month);
   }
 });
 
 new ResizeObserver(renderChart).observe(plot);
+
+document.querySelectorAll(".view-toggle button").forEach(b => b.addEventListener("click", () => {
+  state.view = b.dataset.view;
+  renderChart();
+}));
 
 
 /* 5. Recommendations ----------------------------------------------------- */
@@ -596,6 +729,7 @@ function renderPlan() {
   count.textContent = picked.length ? `${picked.length} selected · ${money(t.spend)} / month` : "";
 
   renderTotal();
+  renderChart();   // the "Next 12 months" view follows the ticks
 }
 
 // tells screen reader users what the new total is (only when they tick, not on every redraw)

@@ -290,6 +290,13 @@ a.btn-next { text-decoration: none; }
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+.rec-capped {                         /* best-month cap: why this figure is lower than the sheet's */
+  margin: .3rem 0 0;
+  font-size: .72rem;
+  font-style: italic;
+  color: var(--brownink);
+}
+
 .rec-fig-note {
   grid-column: 3 / 5;
   text-align: right;

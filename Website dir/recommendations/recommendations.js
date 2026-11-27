@@ -60,13 +60,50 @@ function netRates(rule) {
   };
 }
 
-// the monthly saving for one card, or null when it can't be worked out monthly
+// rounded to the penny (and 0.01 kg), so totals always equal the figures shown on each row
+const round2 = n => Math.round(n * 100) / 100;
+
+// the sheet's monthly saving for some spend, or null when it can't be worked out monthly (Airplane)
 function savingFor(rule, spend) {
   if (rule.perTrip) return null;
   const r = netRates(rule);
-  // rounded to the penny (and 0.01 kg) here, so totals always equal the figures shown on each row
-  const round2 = n => Math.round(n * 100) / 100;
   return { spend: round2(spend * r.spend), carbon: round2(spend * r.carbon) };
+}
+
+/* Best-month cap (prototype)
+   The sheet's saving is a fixed share of what you spent. With the cap on, it's limited to how far
+   this month is above your own best (lowest) month for that subcategory in the past 12 months:
+   we never claim more than you've already shown you can do. Carbon is scaled down in proportion.
+   It only applies once there are at least 3 earlier months to compare against.
+   Known weakness: seasonal bills (Heating, Electricity) are compared across seasons. */
+const CAP_AT_BEST_MONTH = true;
+const CAP_LOOKBACK_MONTHS = 12;
+const CAP_MIN_HISTORY = 3;
+
+// your lowest spend on a subcategory in the months before ym, or null without enough history
+function bestMonth(sub, ym) {
+  const i = state.months.indexOf(ym);
+  const earlier = state.months.slice(Math.max(0, i - CAP_LOOKBACK_MONTHS), Math.max(0, i))
+    .map(m => ({ ym: m, spend: state.byMonth[m]?.bySub[sub] ?? 0 }))
+    .filter(x => x.spend > 0);
+  if (earlier.length < CAP_MIN_HISTORY) return null;
+  return earlier.reduce((lo, x) => (x.spend < lo.spend ? x : lo));
+}
+
+// the saving shown for a tip in a month: the sheet's figure, capped at your best month when that's lower.
+// Returns null for tips without a monthly figure. `capped` and `best` explain the figure on the row.
+function monthSaving(rule, ym) {
+  const spend = state.byMonth[ym]?.bySub[rule.subcategory] ?? 0;
+  const sheet = savingFor(rule, spend);
+  if (!sheet) return null;
+  const best = CAP_AT_BEST_MONTH ? bestMonth(rule.subcategory, ym) : null;
+  const gap = best ? Math.max(0, spend - best.spend) : Infinity;
+  if (gap >= sheet.spend) return { ...sheet, sheet, best, capped: false };
+  return {
+    spend: round2(gap),
+    carbon: round2(sheet.carbon * (gap / sheet.spend)),
+    sheet, best, capped: true,
+  };
 }
 
 // When is a tip worth doing? If it saves at least £1 a month OR at least 0.5 kg CO₂e a month.
@@ -163,8 +200,8 @@ function relevantRules(b) {
 }
 
 // worth doing (main list) or a smaller win (collapsed section); see MIN_SAVING_GBP / MIN_SAVING_KG
-function isSmallWin(rule, b) {
-  const s = savingFor(rule, b.bySub[rule.subcategory]);
+function isSmallWin(rule) {
+  const s = monthSaving(rule, state.selected);
   return s !== null && s.spend < MIN_SAVING_GBP && s.carbon < MIN_SAVING_KG;
 }
 
@@ -433,10 +470,21 @@ function recCard(rule, spend, i) {
   meta.id = `rec-meta-${i}`;
   main.append(action, meta);
 
-  const s = savingFor(rule, spend);
+  const s = monthSaving(rule, state.selected);
+  // when the cap lowered the figure, say so and show the month it's based on
+  if (s?.capped) {
+    const why = s.spend > 0
+      ? `Limited to your best recent month: ${money(s.best.spend)} in ${monthName(s.best.ym)} (the sheet suggests ${money(s.sheet.spend)})`
+      : `You're already at or below your best recent month: ${money(s.best.spend)} in ${monthName(s.best.ym)}`;
+    main.append(make("p", "rec-capped", why));
+  }
+
   const figs = make("div", "rec-figs");
   figs.id = `rec-figs-${i}`;
-  if (s) {
+  if (s?.capped && s.spend === 0) {
+    figs.classList.add("muted");
+    figs.append(make("span", "rec-fig-note", "Keep it up: no further saving expected from this tip"));
+  } else if (s) {
     figs.append(
       make("span", "visually-hidden", "Could save "),
       make("span", "rec-fig rec-fig-money", money(s.spend)),
@@ -455,7 +503,7 @@ function recCard(rule, spend, i) {
 
 // biggest £ saving first; tips without a monthly figure (Airplane) go last
 function bySaving(b) {
-  const value = rule => savingFor(rule, b.bySub[rule.subcategory])?.spend ?? -1;
+  const value = rule => monthSaving(rule, state.selected)?.spend ?? -1;
   return (x, y) => value(y) - value(x);
 }
 
@@ -467,8 +515,8 @@ function renderRecs() {
 
   // worth-doing tips in the main list, smaller wins in the collapsed section, each biggest saving first
   const sorted = b ? [...rules].sort(bySaving(b)) : [];
-  const main = sorted.filter(r => !isSmallWin(r, b));
-  const small = sorted.filter(r => isSmallWin(r, b));
+  const main = sorted.filter(r => !isSmallWin(r));
+  const small = sorted.filter(r => isSmallWin(r));
   recList.replaceChildren(...main.map((r, i) => recCard(r, b.bySub[r.subcategory], i)));
   smallList.replaceChildren(...small.map((r, i) => recCard(r, b.bySub[r.subcategory], main.length + i)));
   recList.classList.toggle("d-none", !main.length);
@@ -481,7 +529,8 @@ function renderRecs() {
   const n = (k, word) => `${k} ${word}${k === 1 ? "" : "s"}`;
   $("recs-sub").textContent = rules.length
     ? `${n(main.length, "tip")} based on your ${monthName(ym)} spending, biggest saving first.` +
-      (small.length ? ` ${n(small.length, "smaller win")} below.` : "")
+      (small.length ? ` ${n(small.length, "smaller win")} below.` : "") +
+      (CAP_AT_BEST_MONTH ? " Savings never go beyond what you managed in your best month of the past year." : "")
     : "";
   $("rec-cols").classList.toggle("d-none", !rules.length);
 
@@ -506,7 +555,7 @@ function shownRows() {
   const b = state.byMonth[state.selected];
   return [...$("recs").querySelectorAll(".rec")].map(li => {   // main list and smaller wins
     const rule = RULES.find(r => r.subcategory === li.dataset.sub);
-    return { li, rule, s: savingFor(rule, b.bySub[rule.subcategory]) };
+    return { li, rule, s: monthSaving(rule, state.selected) };
   });
 }
 const isPicked = x => state.picked.has(x.rule.subcategory);

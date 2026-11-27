@@ -69,8 +69,12 @@ function savingFor(rule, spend) {
   return { spend: round2(spend * r.spend), carbon: round2(spend * r.carbon) };
 }
 
-// add thresholds lin but we can dicsuss
-const CATEGORY_THRESHOLD = { Travel: 0, Food: 0, Utilities: 0 };
+// When is a tip worth doing? If it saves at least £1 a month OR at least 0.5 kg CO₂e a month.
+// Tips under both limits aren't hidden: they go in a collapsed "Smaller wins" section under the list.
+// Checked against the example data (6 personas × 12 months) this moves about 1 in 6 tips there,
+// mostly Water and small months of Electricity, Bus, Carshare and Subway. Change these to tune it.
+const MIN_SAVING_GBP = 1;
+const MIN_SAVING_KG = 0.5;
 
 const state = {
   customerId: null,
@@ -148,14 +152,20 @@ function axisScale(max) {
   return { top: step * 4, step };
 }
 
-// the flowchart: the category is above its threshold and the subcategory has spending
-// and (from the sheet) the card is only shown when both net savings are positive
+// a tip applies when its subcategory has spending that month and (from the sheet) both net
+// savings are positive. Airplane has no monthly figure, so it applies whenever there's flight spend.
 function relevantRules(b) {
   return RULES.filter(rule => {
-    if (!(b.byCat[rule.category] > CATEGORY_THRESHOLD[rule.category] && b.bySub[rule.subcategory] > 0)) return false;
+    if (!(b.bySub[rule.subcategory] > 0)) return false;
     const s = savingFor(rule, b.bySub[rule.subcategory]);
     return s === null || (s.spend > 0 && s.carbon > 0);
   });
+}
+
+// worth doing (main list) or a smaller win (collapsed section); see MIN_SAVING_GBP / MIN_SAVING_KG
+function isSmallWin(rule, b) {
+  const s = savingFor(rule, b.bySub[rule.subcategory]);
+  return s !== null && s.spend < MIN_SAVING_GBP && s.carbon < MIN_SAVING_KG;
 }
 
 
@@ -379,6 +389,7 @@ new ResizeObserver(renderChart).observe(plot);
 /* 5. Recommendations ----------------------------------------------------- */
 
 const recList = $("rec-list");
+const smallList = $("rec-list-small");   // "Smaller wins": tips under the minimum saving
 
 // small helper for building the cards and the total
 function make(tag, cls, text) {
@@ -454,13 +465,23 @@ function renderRecs() {
   const b = ym ? state.byMonth[ym] : null;
   const rules = b ? relevantRules(b) : [];
 
+  // worth-doing tips in the main list, smaller wins in the collapsed section, each biggest saving first
   const sorted = b ? [...rules].sort(bySaving(b)) : [];
-  recList.replaceChildren(...sorted.map((r, i) => recCard(r, b.bySub[r.subcategory], i)));
+  const main = sorted.filter(r => !isSmallWin(r, b));
+  const small = sorted.filter(r => isSmallWin(r, b));
+  recList.replaceChildren(...main.map((r, i) => recCard(r, b.bySub[r.subcategory], i)));
+  smallList.replaceChildren(...small.map((r, i) => recCard(r, b.bySub[r.subcategory], main.length + i)));
+  recList.classList.toggle("d-none", !main.length);
+  $("rec-small").classList.toggle("d-none", !small.length);
+  $("rec-small-none").classList.toggle("d-none", main.length > 0 || !small.length);
+  $("rec-small-why").textContent = `Each saves under ${money(MIN_SAVING_GBP)} and ${MIN_SAVING_KG} kg CO₂e a month`;
   renderPlan();   // ticks, the count by the heading and the summary box
 
   // one line under the heading says the month once, instead of on every row
+  const n = (k, word) => `${k} ${word}${k === 1 ? "" : "s"}`;
   $("recs-sub").textContent = rules.length
-    ? `${rules.length === 1 ? "1 tip" : `${rules.length} tips`} based on your ${monthName(ym)} spending, biggest saving first.`
+    ? `${n(main.length, "tip")} based on your ${monthName(ym)} spending, biggest saving first.` +
+      (small.length ? ` ${n(small.length, "smaller win")} below.` : "")
     : "";
   $("rec-cols").classList.toggle("d-none", !rules.length);
 
@@ -483,7 +504,7 @@ function renderRecs() {
 // every tip in the list for the selected month, with its monthly saving (null for Airplane)
 function shownRows() {
   const b = state.byMonth[state.selected];
-  return [...recList.querySelectorAll(".rec")].map(li => {
+  return [...$("recs").querySelectorAll(".rec")].map(li => {   // main list and smaller wins
     const rule = RULES.find(r => r.subcategory === li.dataset.sub);
     return { li, rule, s: savingFor(rule, b.bySub[rule.subcategory]) };
   });
@@ -514,6 +535,11 @@ function renderPlan() {
   all.checked = rows.length > 0 && picked.length === rows.length;
   all.indeterminate = picked.length > 0 && picked.length < rows.length;
 
+  // "Smaller wins (2)", plus how many of those are ticked, since the section may be closed
+  const smallRows = rows.filter(x => smallList.contains(x.li));
+  const smallPicked = smallRows.filter(isPicked).length;
+  $("rec-small-title").textContent = `Smaller wins (${smallRows.length})` + (smallPicked ? ` · ${smallPicked} selected` : "");
+
   // small reminder by the heading, for when the summary box is scrolled out of view
   const t = sumSavings(picked);
   const count = $("recs-count");
@@ -538,8 +564,9 @@ function setPicked(rows, on) {
   announcePlan();
 }
 
-recList.addEventListener("change", e => {
-  const box = e.target.closest(".rec-check");
+const recsPanel = $("recs");   // both lists live in it, so one set of handlers covers them
+recsPanel.addEventListener("change", e => {
+  const box = e.target.closest(".rec .rec-check");   // a row's box (select-all has its own handler)
   if (!box) return;
   box.checked ? state.picked.add(box.dataset.sub) : state.picked.delete(box.dataset.sub);
   savePlan();
@@ -547,7 +574,7 @@ recList.addEventListener("change", e => {
   announcePlan();
 });
 // clicking anywhere on a row ticks it, not just the small box
-recList.addEventListener("click", e => {
+recsPanel.addEventListener("click", e => {
   if (e.target.closest(".rec-check")) return;
   e.target.closest(".rec")?.querySelector(".rec-check").click();
 });

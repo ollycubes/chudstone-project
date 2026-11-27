@@ -403,6 +403,45 @@ a.btn-next { text-decoration: none; }
 .recs { scroll-margin-top: 1.5rem; }   /* leaves a little space above the panel after the scroll */
 #recs-title:focus { outline: none; }  /* focus is moved here by the button; no box around the heading */
 
+/* "Smaller wins": tips under the minimum saving, closed by default */
+.rec-small { margin-top: .75rem; }
+.rec-small > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .1rem .75rem;
+  padding: .55rem 1.25rem;
+  border: 1px dashed var(--greygreenline);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  list-style: none;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--darkblueink);
+}
+.rec-small > summary::-webkit-details-marker { display: none; }
+.rec-small > summary::before {             /* chevron: points right when closed, down when open */
+  content: "";
+  align-self: center;
+  width: .45rem;
+  height: .45rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform .15s;
+}
+.rec-small[open] > summary::before { transform: rotate(45deg); }
+.rec-small > summary:hover { background: #FAFBF7; }
+.rec-small > summary:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+.rec-small-why { font-size: .72rem; font-weight: 400; color: var(--brownink); }
+.rec-small[open] > summary { margin-bottom: .5rem; }
+
+.rec-small-none {
+  margin: 0;
+  font-size: .85rem;
+  color: var(--brownink);
+}
+
 .rec-empty {
   font-size: .85rem;
   color: var(--brownink);

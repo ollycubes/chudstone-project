@@ -418,9 +418,6 @@ function renderRecs() {
   const b = ym ? state.byMonth[ym] : null;
   const rules = b ? relevantRules(b) : [];
 
-  $("recs-note").textContent = ym
-    ? `Based on your spending in ${monthName(ym)}.${state.months.length > 1 ? " Select a month on the graph to change it." : ""}`
-    : "";
   recList.replaceChildren(...rules.map(r => recCard(r, ym, b.bySub[r.subcategory])));
   renderTotal(rules, ym, b);
 
@@ -477,9 +474,13 @@ function renderTotal(rules, ym, b) {
     breakdown.append(li);
   }
 
-  const detail = make("span", "rec-total-detail",
-    `That's ${share(spend / b.spend)} of your ${money(b.spend)} spending and ${share(carbon / b.carbon)} of your carbon in ${monthName(ym)}.`);
-  if (counted.length < rules.length) detail.append(" Flight savings aren't included because they depend on fares.");
+  // two short lines rather than one long sentence, so they don't wrap in the narrow box
+  const detail = make("div", "rec-total-detail");
+  detail.append(
+    make("span", "", `${share(spend / b.spend)} of your ${money(b.spend)} spending`),
+    make("span", "", `${share(carbon / b.carbon)} of your carbon in ${monthName(ym)}`),
+  );
+  if (counted.length < rules.length) detail.append(make("span", "", "Flight savings aren't included because they depend on fares."));
 
   box.replaceChildren(
     make("span", "rec-saving-label",

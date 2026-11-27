@@ -827,7 +827,6 @@ function jumpLink(count, planning) {
 
 /* 6. Personas ------------------------------------------------------------ */
 
-// persona picker, same idea as the dashboard
 const personaBtn = $("persona-btn");
 const personaMenu = $("persona-menu");
 
@@ -860,6 +859,8 @@ personaMenu.addEventListener("click", async e => {
   state.selected = null;
   loadEntries();
 });
+
+
 
 
 /* 7. Start up ------------------------------------------------------------ */

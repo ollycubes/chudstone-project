@@ -65,7 +65,6 @@ To do ?
 | Playwright frontend tests | numgum | X |
 | Unit tests for the API with pytest, run in the pipeline | Oliver | X |
 | SCA with `pip-audit` in the pipeline | Oliver | X |
-| Bandit in the pipeline | | ? |
 | DAST against the running API (OWASP ZAP) | Oliver | X |
 | Deliberate security finding + fix as evidence | | ? |
 

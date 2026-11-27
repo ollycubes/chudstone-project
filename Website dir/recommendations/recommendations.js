@@ -374,42 +374,50 @@ function make(tag, cls, text) {
   return node;
 }
 
-// builds one recommendation card
-function recCard(rule, ym, spend) {
+// builds one row of the recommendations list:
+//   left   the tip, then its category, subcategory and what was spent there
+//   right  what it saves a month, in £ and kg CO₂e, lined up under the column headings
+// screen readers hear e.g. "… Could save £7.74 and 4.26 kg CO₂e a month"
+function recCard(rule, spend) {
   const li = make("li", "rec");
   li.dataset.sub = rule.subcategory;
 
-  // left: what to do and why; right: what it saves
-  const body = make("div", "rec-body");
-  const text = make("div", "rec-text");
-  text.append(
-    make("span", "rec-tag", `${rule.category} · ${rule.subcategory}`),
-    make("span", "rec-action", rule.action),
-    make("span", "rec-basis", `Based on ${money(spend)} spent on ${rule.subcategory} in ${monthName(ym)}`),
+  const main = make("div", "rec-main");
+  const meta = make("p", "rec-meta");
+  meta.append(
+    make("span", `rec-dot cat-${rule.category.toLowerCase()}`),
+    make("span", "rec-cat", rule.category),
+    make("span", "rec-sep", "·"),
+    make("span", "", rule.subcategory),
+    make("span", "rec-sep", "·"),
+    make("span", "", `${money(spend)} spent`),
   );
+  meta.querySelectorAll(".rec-dot, .rec-sep").forEach(n => n.setAttribute("aria-hidden", "true"));
+  main.append(make("p", "rec-action", rule.action), meta);
 
   const s = savingFor(rule, spend);
-  const saving = make("div", "rec-saving");
+  const figs = make("div", "rec-figs");
   if (s) {
-    // screen readers hear "Could save £7.74 and 4.26 kg CO₂e a month"
-    saving.append(
-      make("span", "rec-saving-label", "Could save"),
-      make("span", "rec-money", money(s.spend)),
+    figs.append(
+      make("span", "visually-hidden", "Could save "),
+      make("span", "rec-fig rec-fig-money", money(s.spend)),
       make("span", "visually-hidden", " and "),
-      make("span", "rec-carbon", carbonKg(s.carbon)),
-      make("span", "rec-per", " a month"),
+      make("span", "rec-fig rec-fig-carbon", carbonKg(s.carbon)),
+      make("span", "rec-fig-per", " a month"),
     );
   } else {
-    saving.classList.add("muted");
-    saving.append(
-      make("span", "rec-saving-label", "Savings"),
-      make("span", "rec-per", "Depend on the flight and train fares for your trip"),
-    );
+    figs.classList.add("muted");
+    figs.append(make("span", "rec-fig-note", "Depends on the flight and train fares for your trip"));
   }
-  body.append(text, saving);
 
-  li.append(body);
+  li.append(main, figs);
   return li;
+}
+
+// biggest £ saving first; tips without a monthly figure (Airplane) go last
+function bySaving(b) {
+  const value = rule => savingFor(rule, b.bySub[rule.subcategory])?.spend ?? -1;
+  return (x, y) => value(y) - value(x);
 }
 
 // works out which recommendations to show for the selected month and fills the list
@@ -418,8 +426,15 @@ function renderRecs() {
   const b = ym ? state.byMonth[ym] : null;
   const rules = b ? relevantRules(b) : [];
 
-  recList.replaceChildren(...rules.map(r => recCard(r, ym, b.bySub[r.subcategory])));
+  const sorted = b ? [...rules].sort(bySaving(b)) : [];
+  recList.replaceChildren(...sorted.map(r => recCard(r, b.bySub[r.subcategory])));
   renderTotal(rules, ym, b);
+
+  // one line under the heading says the month once, instead of on every row
+  $("recs-sub").textContent = rules.length
+    ? `${rules.length === 1 ? "1 tip" : `${rules.length} tips`} based on your ${monthName(ym)} spending, biggest saving first.`
+    : "";
+  $("rec-cols").classList.toggle("d-none", !rules.length);
 
   // no month at all, a month with no entries (a gap), or a month where no rule applies
   const text = !ym ? "No spending yet. Add a month to get recommendations."
@@ -460,7 +475,7 @@ function renderTotal(rules, ym, b) {
     make("span", "rec-per", "a month"),
   );
 
-  // where it comes from: one line per category, in the same order as the cards
+  // where it comes from: one line per category (Travel, Food, Utilities)
   const byCat = new Map();
   for (const { rule, s } of counted) {
     const c = byCat.get(rule.category) || { spend: 0, carbon: 0 };
@@ -488,7 +503,25 @@ function renderTotal(rules, ym, b) {
     figures,
     breakdown,
     detail,
+    jumpLink(rules.length),
   );
+}
+
+// button at the bottom of the summary that takes you down to the cards.
+// It's a real link to #recs, so it still works without JavaScript; with it, it scrolls smoothly
+// and moves keyboard focus to the Recommendations heading.
+function jumpLink(count) {
+  const a = make("a", "rec-total-jump", count === 1 ? "See the recommendation" : `See all ${count} recommendations`);
+  a.href = "#recs";
+  a.append(make("span", "rec-total-jump-arrow", "↓"));
+  a.querySelector(".rec-total-jump-arrow").setAttribute("aria-hidden", "true");
+  a.addEventListener("click", e => {
+    e.preventDefault();
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    $("recs").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    $("recs-title").focus({ preventScroll: true });
+  });
+  return a;
 }
 
 /* 6. Personas ------------------------------------------------------------ */

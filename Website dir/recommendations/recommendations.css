@@ -173,57 +173,100 @@ a.btn-next { text-decoration: none; }
   margin: 0 0 .25rem;
 }
 
+.recs-head { margin-bottom: 1rem; }
+.recs-head h2 { margin: 0; }
+.recs-sub {
+  margin: .2rem 0 0;
+  font-size: .8rem;
+  color: var(--brownink);
+}
+
+/* the list reads like a table: one bordered block, a row per tip, figures lined up in two columns */
+.rec-cols,
+.rec {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 8.5rem 9.5rem;
+  column-gap: 1.5rem;
+  align-items: center;
+}
+.rec-cols {
+  padding: 0 1.25rem .4rem;
+  font-size: .66rem;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--brownink);
+}
+.rec-cols span + span { text-align: right; }
+
 .rec-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: .75rem;
-}
-
-/* each tip: what to do and why on top, a green band with what it saves underneath.
-   When the list is full width (tablet) the band becomes a column on the right, see 7. Responsive */
-.rec-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
   background: var(--white);
   border: 1px solid var(--greygreenline);
-  border-radius: var(--radius-small);
-  color: var(--brownink);
+  border-radius: var(--radius-card);
   overflow: hidden;
 }
-.rec-text { padding: .8rem 1rem; }
-
-.rec-tag {
-  display: block;
-  font-size: .68rem;
-  font-weight: 600;
-  letter-spacing: .04em;
-  text-transform: uppercase;
+.rec {
+  padding: .9rem 1.25rem;
+  transition: background-color .15s;
 }
+.rec + .rec { border-top: 1px solid var(--greygreenline); }
+.rec:hover  { background: #FAFBF7; }
+
 .rec-action {
-  display: block;
-  margin: .2rem 0 .3rem;
+  margin: 0 0 .3rem;
   font-size: .95rem;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.4;
   color: var(--darkblueink);
 }
-.rec-basis {
-  display: block;
-  font-size: .75rem;
-}
-
-.rec-saving {
+.rec-meta {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 .5rem;
-  padding: .5rem 1rem;
-  background: var(--lightgreen);
-  color: var(--darkblueink);
+  align-items: center;
+  gap: .15rem .45rem;
+  margin: 0;
+  font-size: .75rem;
+  color: var(--brownink);
 }
+.rec-cat { font-weight: 600; }
+.rec-sep { opacity: .5; }
+.rec-dot {
+  width: .5rem;
+  height: .5rem;
+  border-radius: 50%;
+}
+.rec-dot.cat-travel    { background: #4A78C2; }
+.rec-dot.cat-food      { background: var(--green); }
+.rec-dot.cat-utilities { background: #E0A43A; }
+
+/* the figures sit straight in the row's grid columns, under their headings */
+.rec-figs { display: contents; }
+.rec-fig {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rec-fig-money  { font-size: 1.1rem; font-weight: 700; color: var(--green-hover); }
+.rec-fig-carbon { font-size: .9rem;  font-weight: 600; color: var(--darkblueink); }
+.rec-fig-per {                      /* the column headings say "/ month"; screen readers still hear it */
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.rec-fig-note {
+  grid-column: 2 / 4;
+  text-align: right;
+  font-size: .75rem;
+  font-style: italic;
+  color: var(--brownink);
+}
+
+/* shared with the summary box */
 .rec-saving-label {
   font-size: .68rem;
   font-weight: 600;
@@ -232,20 +275,12 @@ a.btn-next { text-decoration: none; }
   color: var(--brownink);
 }
 .rec-money {
-  font-size: 1.15rem;
   font-weight: 700;
   line-height: 1.2;
-  color: var(--green-hover);
 }
-.rec-carbon {
-  font-size: .85rem;
-  font-weight: 700;
-}
-.rec-per { font-size: .72rem; }
-.rec-saving.muted { background: var(--lightblueink); }
-.rec-saving.muted .rec-per { margin-top: .15rem; }
+.rec-carbon { font-weight: 700; }
+.rec-per    { font-size: .72rem; }
 
-/* the total for every tip: sits above the list, so it stays in view while the list scrolls */
 /* the total for every tip: fills the summary panel beside the graph */
 .rec-total {
   flex: 1 1 auto;
@@ -290,6 +325,31 @@ a.btn-next { text-decoration: none; }
 }
 .rec-total-detail span { display: block; }
 
+/* "See all 8 recommendations" button: sits at the bottom of the box, in the space under the figures */
+.rec-total-jump {
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: .5rem;
+  padding: .6rem 1rem;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--navy);
+  font-size: .85rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color .15s;
+}
+.rec-total-detail { margin-bottom: 1.25rem; }   /* the least space above the button when the box is short */
+.rec-total-jump:hover  { background: var(--green); color: var(--navy); }
+.rec-total-jump:focus-visible { outline: 3px solid var(--lime); outline-offset: 3px; }
+.rec-total-jump-arrow { transition: transform .15s; }
+.rec-total-jump:hover .rec-total-jump-arrow { transform: translateY(2px); }
+
+.recs { scroll-margin-top: 1.5rem; }   /* leaves a little space above the panel after the scroll */
+#recs-title:focus { outline: none; }  /* focus is moved here by the button; no box around the heading */
+
 .rec-empty {
   font-size: .85rem;
   color: var(--brownink);
@@ -310,21 +370,21 @@ footer { max-width: var(--ways-width); }
   }
 }
 
-@media (min-width: 576px) {              /* cards are wide enough for savings to get their own column */
-  .rec-body { grid-template-columns: minmax(0, 1fr) 11rem; }
-  .rec-saving {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    justify-content: center;
-    align-items: flex-end;
-    text-align: right;
-    padding: .8rem 1rem;
-  }
-  .rec-money { font-size: 1.35rem; }
-}
-
 @media (max-width: 575.98px) {           /* phone */
   .panel { padding: 1rem; }
   .plot  { height: 16rem; }
   .rec-total .rec-money { font-size: 2.25rem; }
+
+  /* rows stack: tip, details, then the two figures side by side with "a month" shown */
+  .rec-cols { display: none; }
+  .rec { grid-template-columns: minmax(0, 1fr); padding: .85rem 1rem; }
+  .rec-figs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 .75rem;
+    margin-top: .5rem;
+  }
+  .rec-fig-per { position: static; width: auto; height: auto; clip: auto; font-size: .72rem; color: var(--brownink); }
+  .rec-fig-note { text-align: left; }
 }

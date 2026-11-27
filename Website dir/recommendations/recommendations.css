@@ -7,7 +7,7 @@ CONTENTS
    5. Recommendations list
    6. Footer
    7. Responsive
-
+   ========================================================================== */
 
    /* 1. TOKENS */
 
@@ -15,7 +15,7 @@ CONTENTS
   --c-spend:  var(--green-hover);
   --c-carbon: var(--navy);
 
-  --ways-width: 70rem;   /* a little wider than before, so the side column has room for the cards */
+  --ways-width: 70rem;   /* wide enough for the graph and the summary box side by side */
 }
 
    /* 2. LAYOUT */
@@ -32,7 +32,7 @@ CONTENTS
 
 #msg { max-width: var(--ways-width); }
 
-/* desktop: graph and recommendations side by side (tablet and phone stack them, see 7. Responsive) */
+/* desktop: graph and summary box side by side, recommendations underneath (tablet and phone stack all three) */
 .ways-grid {
   display: grid;
   grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
@@ -47,12 +47,6 @@ CONTENTS
   padding: 1.25rem 1.5rem;
   color: var(--darkblueink);
   position: relative;
-}
-
-.section-note {
-  font-size: .8rem;
-  color: var(--brownink);
-  margin-bottom: .75rem;
 }
 
 a.btn-next { text-decoration: none; }
@@ -202,20 +196,21 @@ a.btn-next { text-decoration: none; }
 
    /* 5. RECOMMENDATIONS LIST */
 
-/* graph | summary on the top row, the recommendation cards across the full width underneath */
 .recs {
-  grid-column: 1 / -1;
+  grid-column: 1 / -1;            /* full width, under the graph and summary */
   display: flex;
   flex-direction: column;
+  scroll-margin-top: 1.5rem;      /* a little space above it after "See all recommendations" scrolls here */
 }
+.recs h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+#recs-title:focus { outline: none; }   /* focus is moved here by that button; no box around the heading */
 .summary {
   display: flex;
   flex-direction: column;
-}
-.recs h2, .summary h2 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0 0 .25rem;
 }
 
 .recs-head {
@@ -237,7 +232,6 @@ a.btn-next { text-decoration: none; }
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.recs-head h2 { margin: 0; }
 .recs-sub {
   margin: .2rem 0 0;
   font-size: .8rem;
@@ -350,39 +344,31 @@ a.btn-next { text-decoration: none; }
   color: var(--brownink);
 }
 
-/* shared with the summary box */
-.rec-saving-label {
-  font-size: .68rem;
-  font-weight: 600;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--brownink);
-}
-.rec-money {
-  font-weight: 700;
-  line-height: 1.2;
-}
-.rec-carbon { font-weight: 700; }
-.rec-per    { font-size: .72rem; }
-
-/* the total for every tip: fills the summary panel beside the graph */
+/* summary box: the total for every tip (or the ticked ones); fills the panel beside the graph */
 .rec-total {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;   /* start at the top of the box, no gap above the heading */
   padding: 1.25rem;
   border-radius: var(--radius-small);
   background: var(--navy);
   color: var(--white);
 }
-.rec-total .rec-saving-label { color: var(--lime); display: block; margin-bottom: .25rem; }
+.rec-total .rec-saving-label {
+  display: block;
+  margin-bottom: .25rem;
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--lime);
+}
 .rec-total-figures {
   display: flex;
   flex-direction: column;
 }
-.rec-total .rec-money  { font-size: 2.75rem; line-height: 1.1; color: var(--lime); }
-.rec-total .rec-carbon { font-size: 1.35rem; }
+.rec-total .rec-money  { font-size: 2.75rem; font-weight: 700; line-height: 1.1; color: var(--lime); }
+.rec-total .rec-carbon { font-size: 1.35rem; font-weight: 700; }
 .rec-total .rec-per    { font-size: .8rem; opacity: .85; }
 
 .rec-total-breakdown {
@@ -402,7 +388,7 @@ a.btn-next { text-decoration: none; }
 .rec-total-breakdown span:last-child { text-align: right; }
 
 .rec-total-detail {               /* quieter than the figures above it */
-  margin-top: .75rem;
+  margin: .75rem 0 1.25rem;        /* the bottom margin is the least space above the button */
   font-size: .68rem;
   line-height: 1.5;
   opacity: .6;
@@ -446,14 +432,10 @@ a.btn-next { text-decoration: none; }
   text-decoration: none;
   transition: background-color .15s;
 }
-.rec-total-detail { margin-bottom: 1.25rem; }   /* the least space above the button when the box is short */
 .rec-total-jump:hover  { background: var(--green); color: var(--navy); }
 .rec-total-jump:focus-visible { outline: 3px solid var(--lime); outline-offset: 3px; }
 .rec-total-jump-arrow { transition: transform .15s; }
 .rec-total-jump:hover .rec-total-jump-arrow { transform: translateY(2px); }
-
-.recs { scroll-margin-top: 1.5rem; }   /* leaves a little space above the panel after the scroll */
-#recs-title:focus { outline: none; }  /* focus is moved here by the button; no box around the heading */
 
 /* "Smaller wins": tips under the minimum saving, closed by default */
 .rec-small { margin-top: .75rem; }

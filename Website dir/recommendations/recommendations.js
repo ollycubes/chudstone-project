@@ -1,8 +1,10 @@
 /* ==========================================================================
    Ways to save
 
-     GET /personas                 persona picker
-     GET /entries?customer_id=     every saved entry for the persona
+     GET  /personas    persona picker
+     GET  /session     who the server session is signed in as
+     POST /session     switch persona (the demo "login")
+     GET  /entries     every saved entry for the signed-in persona
 
    ========================================================================== */
 
@@ -116,12 +118,13 @@ const MIN_SAVING_KG = 0.5;
 const state = {
   customerId: null,
   personas: [],
-  entries: [],  
-  byMonth: {},       
-  months: [],         
-  selected: null,    
+  byMonth: {},        // "2026-10" -> { spend, carbon, bySub: { "Bus": 35.52, … } }
+  months: [],         // every month from the first to the latest, gaps included
+  selected: null,     // the month the recommendations are for
+  rows: [],           // the tips for the selected month: { rule, spend, s (saving), small, li }
   picked: new Set(),  // subcategories whose tip is ticked ("Your plan"), remembered per persona
   view: "history",    // graph view: "history" or "projection" (Next 12 months)
+  proj: null,         // the Next 12 months figures, for the tooltip
 };
 
 // the plan is saved in this browser per persona, so ticks survive a reload or a change of month
@@ -141,9 +144,9 @@ const $ = id => document.getElementById(id);
 /* 2. Calculations  ------------------------------- */
 
 const money = n => "£" + Number(n).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const kg = n => Number(n).toLocaleString("en-GB", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " kg CO₂e";
-// savings are often under 1 kg, so these keep two decimals (0.14 kg rather than 0.1 kg)
-const carbonKg = n => Number(n).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " kg CO₂e";
+// savings are often under 1 kg, so they use two decimals (0.14 kg rather than 0.1 kg)
+const kg = (n, dp = 1) => Number(n).toLocaleString("en-GB", { minimumFractionDigits: dp, maximumFractionDigits: dp }) + " kg CO₂e";
+const kg2 = n => kg(n, 2);
 const tick = n => Number(n.toFixed(2)).toLocaleString("en-GB");
 
 function monthName(ym) {
@@ -155,27 +158,26 @@ function monthShort(ym, withYear) {
   return new Date(y, m - 1).toLocaleDateString("en-GB", withYear ? { month: "short", year: "2-digit" } : { month: "short" });
 }
 
+function addMonths(ym, k) {
+  const [y, m] = ym.split("-").map(Number);
+  const d = new Date(y, m - 1 + k);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 // every month from first to last, so a month with no entries still appears (as a gap)
 function monthRange(first, last) {
   const out = [];
-  let [y, m] = first.split("-").map(Number);
-  const [ly, lm] = last.split("-").map(Number);
-  while (y < ly || (y === ly && m <= lm)) {
-    out.push(`${y}-${String(m).padStart(2, "0")}`);
-    if (++m > 12) { m = 1; y++; }
-  }
+  for (let ym = first; ym <= last; ym = addMonths(ym, 1)) out.push(ym);   // "YYYY-MM" sorts as text
   return out;
 }
 
-// entries -> per-month totals. Each entry is counted exactly once.
-// adds up the entries into totals for each month
+// adds up the entries into totals for each month (each entry is counted exactly once)
 function aggregate(entries) {
   const byMonth = {};
   for (const e of entries) {
-    const b = (byMonth[e.month] ||= { spend: 0, carbon: 0, byCat: {}, bySub: {} });
+    const b = (byMonth[e.month] ||= { spend: 0, carbon: 0, bySub: {} });
     b.spend += e.amount;
     b.carbon += e.carbonKg;
-    b.byCat[e.category] = (b.byCat[e.category] || 0) + e.amount;
     b.bySub[e.subcategory] = (b.bySub[e.subcategory] || 0) + e.amount;
   }
   return byMonth;
@@ -201,10 +203,7 @@ function relevantRules(b) {
 }
 
 // worth doing (main list) or a smaller win (collapsed section); see MIN_SAVING_GBP / MIN_SAVING_KG
-function isSmallWin(rule) {
-  const s = monthSaving(rule, state.selected);
-  return s !== null && s.spend < MIN_SAVING_GBP && s.carbon < MIN_SAVING_KG;
-}
+const isSmallWin = s => s !== null && s.spend < MIN_SAVING_GBP && s.carbon < MIN_SAVING_KG;
 
 
 /* 3. Loading ------------------------------------------------------------- */
@@ -232,23 +231,18 @@ async function startSession(id) {
 }
 
 async function loadEntries() {
+  let entries = [];
   try {
-    state.entries = await getJSON("/entries");
+    entries = await getJSON("/entries");
     clearError();
   } catch {
-    state.entries = [];
     showError("Couldn't load your spending. Is the API running?");
   }
-  rebuild();
-}
-
-function rebuild() {
-  state.byMonth = aggregate(state.entries);
+  state.byMonth = aggregate(entries);
   const used = Object.keys(state.byMonth).sort();
   state.months = used.length ? monthRange(used[0], used[used.length - 1]) : [];
   if (!state.months.includes(state.selected)) state.selected = used[used.length - 1] || null;
-  renderChart();
-  renderRecs();
+  renderRecs();   // also draws the graph
 }
 
 
@@ -271,20 +265,13 @@ function svgEl(name, attrs = {}, ...kids) {
                       month by month: all tips, or just the ticked ones */
 const PROJECTION_MONTHS = 12;
 
-function addMonths(ym, k) {
-  const [y, m] = ym.split("-").map(Number);
-  const d = new Date(y, m - 1 + k);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-// the savings the summary box shows for the selected month, worked out without needing the list
+// the savings the summary box shows: every tip, or just the ticked ones
 function planSaving() {
-  const ym = state.selected, b = ym ? state.byMonth[ym] : null;
-  if (!b) return null;
-  const rows = relevantRules(b).map(rule => ({ rule, s: monthSaving(rule, ym) }));
+  const rows = state.rows;
+  if (!rows.length) return null;
   const picked = rows.filter(isPicked);
   const t = sumSavings(picked.length ? picked : rows);
-  return { spend: t.spend, carbon: t.carbon, planning: picked.length > 0, count: (picked.length || rows.length) };
+  return { spend: t.spend, carbon: t.carbon, planning: picked.length > 0, count: picked.length || rows.length };
 }
 
 // running totals for the next 12 months, starting the month after your latest one
@@ -292,11 +279,12 @@ function projection() {
   const plan = planSaving();
   if (!plan || !(plan.spend > 0)) return null;
   const last = state.months[state.months.length - 1];
+  const k = Array.from({ length: PROJECTION_MONTHS }, (_, i) => i + 1);
   return {
     plan,
-    months: Array.from({ length: PROJECTION_MONTHS }, (_, k) => addMonths(last, k + 1)),
-    spend: Array.from({ length: PROJECTION_MONTHS }, (_, k) => round2(plan.spend * (k + 1))),
-    carbon: Array.from({ length: PROJECTION_MONTHS }, (_, k) => round2(plan.carbon * (k + 1))),
+    months: k.map(i => addMonths(last, i)),
+    spend: k.map(i => round2(plan.spend * i)),
+    carbon: k.map(i => round2(plan.carbon * i)),
   };
 }
 const tipsPhrase = plan => plan.planning
@@ -476,13 +464,11 @@ function selectMonth(ym) {
   if (ym === state.selected) return;
   const hadFocus = document.activeElement?.classList.contains("hit");
   state.selected = ym;
-  renderChart();
-  renderRecs();
+  renderRecs();   // also draws the graph
   if (hadFocus) plot.querySelector(`.hit[data-month="${ym}"]`)?.focus();
 }
 
-// for when u hover over the lines, appears with the carbon and spending values
-
+// tooltip for the month under the pointer (or keyboard focus)
 function showTip(hit, x, y) {
   const ym = hit.dataset.month, projIndex = hit.dataset.proj;
   const b = projIndex !== undefined ? null : state.byMonth[ym];
@@ -558,8 +544,10 @@ document.querySelectorAll(".view-toggle button").forEach(b => b.addEventListener
 
 /* 5. Recommendations ----------------------------------------------------- */
 
+const recsPanel = $("recs");
 const recList = $("rec-list");
 const smallList = $("rec-list-small");   // "Smaller wins": tips under the minimum saving
+$("rec-small-why").textContent = `Each saves under ${money(MIN_SAVING_GBP)} and ${MIN_SAVING_KG} kg CO₂e a month`;
 
 // small helper for building the cards and the total
 function make(tag, cls, text) {
@@ -573,17 +561,13 @@ function make(tag, cls, text) {
 //   left   the tip, then its category, subcategory and what was spent there
 //   right  what it saves a month, in £ and kg CO₂e, lined up under the column headings
 // screen readers hear e.g. "… Could save £7.74 and 4.26 kg CO₂e a month"
-function recCard(rule, spend, i) {
+function recCard({ rule, spend, s }, i) {
   const li = make("li", "rec");
   li.dataset.sub = rule.subcategory;
 
-  // tick to add this tip to "Your plan"; the tip text is its label
-  const on = state.picked.has(rule.subcategory);
-  li.classList.toggle("picked", on);
+  // tick to add this tip to "Your plan"; the tip text is its label (ticks are set by renderPlan)
   const box = make("input", "form-check-input rec-check");
   box.type = "checkbox";
-  box.checked = on;
-  box.dataset.sub = rule.subcategory;
   box.setAttribute("aria-labelledby", `rec-action-${i}`);
   box.setAttribute("aria-describedby", `rec-meta-${i} rec-figs-${i}`);
 
@@ -603,7 +587,6 @@ function recCard(rule, spend, i) {
   meta.id = `rec-meta-${i}`;
   main.append(action, meta);
 
-  const s = monthSaving(rule, state.selected);
   // when the cap lowered the figure, say so and show the month it's based on
   if (s?.capped) {
     const why = s.spend > 0
@@ -622,7 +605,7 @@ function recCard(rule, spend, i) {
       make("span", "visually-hidden", "Could save "),
       make("span", "rec-fig rec-fig-money", money(s.spend)),
       make("span", "visually-hidden", " and "),
-      make("span", "rec-fig rec-fig-carbon", carbonKg(s.carbon)),
+      make("span", "rec-fig rec-fig-carbon", kg2(s.carbon)),
       make("span", "rec-fig-per", " a month"),
     );
   } else {
@@ -634,43 +617,42 @@ function recCard(rule, spend, i) {
   return li;
 }
 
-// biggest £ saving first; tips without a monthly figure (Airplane) go last
-function bySaving(b) {
-  const value = rule => monthSaving(rule, state.selected)?.spend ?? -1;
-  return (x, y) => value(y) - value(x);
-}
-
 // works out which recommendations to show for the selected month and fills the list
 function renderRecs() {
   const ym = state.selected;
   const b = ym ? state.byMonth[ym] : null;
-  const rules = b ? relevantRules(b) : [];
 
-  // worth-doing tips in the main list, smaller wins in the collapsed section, each biggest saving first
-  const sorted = b ? [...rules].sort(bySaving(b)) : [];
-  const main = sorted.filter(r => !isSmallWin(r));
-  const small = sorted.filter(r => isSmallWin(r));
-  recList.replaceChildren(...main.map((r, i) => recCard(r, b.bySub[r.subcategory], i)));
-  smallList.replaceChildren(...small.map((r, i) => recCard(r, b.bySub[r.subcategory], main.length + i)));
+  // each tip's saving is worked out once here and reused by the list, the summary and the graph.
+  // Biggest £ saving first; tips without a monthly figure (Airplane) go last.
+  state.rows = (b ? relevantRules(b) : [])
+    .map(rule => {
+      const s = monthSaving(rule, ym);
+      return { rule, spend: b.bySub[rule.subcategory], s, small: isSmallWin(s) };
+    })
+    .sort((x, y) => (y.s?.spend ?? -1) - (x.s?.spend ?? -1));
+  const main = state.rows.filter(x => !x.small), small = state.rows.filter(x => x.small);
+  [...main, ...small].forEach((x, i) => { x.li = recCard(x, i); });
+  recList.replaceChildren(...main.map(x => x.li));
+  smallList.replaceChildren(...small.map(x => x.li));
   recList.classList.toggle("d-none", !main.length);
   $("rec-small").classList.toggle("d-none", !small.length);
   $("rec-small-none").classList.toggle("d-none", main.length > 0 || !small.length);
-  $("rec-small-why").textContent = `Each saves under ${money(MIN_SAVING_GBP)} and ${MIN_SAVING_KG} kg CO₂e a month`;
-  renderPlan();   // ticks, the count by the heading and the summary box
+  renderPlan();    // ticks, the count by the heading and the summary box
+  renderChart();
 
   // one line under the heading says the month once, instead of on every row
   const n = (k, word) => `${k} ${word}${k === 1 ? "" : "s"}`;
-  $("recs-sub").textContent = rules.length
+  $("recs-sub").textContent = state.rows.length
     ? `${n(main.length, "tip")} based on your ${monthName(ym)} spending, biggest saving first.` +
       (small.length ? ` ${n(small.length, "smaller win")} below.` : "") +
       (CAP_AT_BEST_MONTH ? " Savings never go beyond what you managed in your best month of the past year." : "")
     : "";
-  $("rec-cols").classList.toggle("d-none", !rules.length);
+  $("rec-cols").classList.toggle("d-none", !state.rows.length);
 
   // no month at all, a month with no entries (a gap), or a month where no rule applies
   const text = !ym ? "No spending yet. Add a month to get recommendations."
     : !b ? `No spending recorded in ${monthName(ym)}.`
-    : rules.length ? ""
+    : state.rows.length ? ""
     : `Nothing to suggest for ${monthName(ym)} yet.`;
   const empty = $("rec-empty");
   empty.textContent = text;
@@ -683,14 +665,6 @@ function renderRecs() {
    until something is ticked, then switches to the total for just the ticked tips.
    Each tip is about a different subcategory, so savings never overlap and simply add up. */
 
-// every tip in the list for the selected month, with its monthly saving (null for Airplane)
-function shownRows() {
-  const b = state.byMonth[state.selected];
-  return [...$("recs").querySelectorAll(".rec")].map(li => {   // main list and smaller wins
-    const rule = RULES.find(r => r.subcategory === li.dataset.sub);
-    return { li, rule, s: monthSaving(rule, state.selected) };
-  });
-}
 const isPicked = x => state.picked.has(x.rule.subcategory);
 
 // adds up a set of rows; tips without a monthly figure (Airplane) are counted separately
@@ -706,7 +680,7 @@ function sumSavings(rows) {
 
 // after any change: ticks and highlights, the select-all box, the count by the heading, the summary
 function renderPlan() {
-  const rows = shownRows();
+  const rows = state.rows;
   const picked = rows.filter(isPicked);
   rows.forEach(x => {
     x.li.classList.toggle("picked", isPicked(x));
@@ -718,7 +692,7 @@ function renderPlan() {
   all.indeterminate = picked.length > 0 && picked.length < rows.length;
 
   // "Smaller wins (2)", plus how many of those are ticked, since the section may be closed
-  const smallRows = rows.filter(x => smallList.contains(x.li));
+  const smallRows = rows.filter(x => x.small);
   const smallPicked = smallRows.filter(isPicked).length;
   $("rec-small-title").textContent = `Smaller wins (${smallRows.length})` + (smallPicked ? ` · ${smallPicked} selected` : "");
 
@@ -729,39 +703,43 @@ function renderPlan() {
   count.textContent = picked.length ? `${picked.length} selected · ${money(t.spend)} / month` : "";
 
   renderTotal();
-  renderChart();   // the "Next 12 months" view follows the ticks
 }
 
 // tells screen reader users what the new total is (only when they tick, not on every redraw)
 function announcePlan() {
-  const picked = shownRows().filter(isPicked), t = sumSavings(picked);
+  const picked = state.rows.filter(isPicked), t = sumSavings(picked);
   $("plan-status").textContent = picked.length
-    ? `Your plan: ${picked.length} ${picked.length === 1 ? "tip" : "tips"}, saving ${money(t.spend)} and ${carbonKg(t.carbon)} a month.`
+    ? `Your plan: ${picked.length} ${picked.length === 1 ? "tip" : "tips"}, saving ${money(t.spend)} and ${kg2(t.carbon)} a month.`
     : "No tips selected. The summary shows the most you could save.";
+}
+
+// after any tick: save, update the page, tell screen readers, and redraw Next 12 months if it's showing
+function planChanged() {
+  savePlan();
+  renderPlan();
+  announcePlan();
+  if (state.view === "projection") renderChart();
 }
 
 function setPicked(rows, on) {
   rows.forEach(x => on ? state.picked.add(x.rule.subcategory) : state.picked.delete(x.rule.subcategory));
-  savePlan();
-  renderPlan();
-  announcePlan();
+  planChanged();
 }
 
-const recsPanel = $("recs");   // both lists live in it, so one set of handlers covers them
+// both lists live in the panel, so one set of handlers covers them
 recsPanel.addEventListener("change", e => {
   const box = e.target.closest(".rec .rec-check");   // a row's box (select-all has its own handler)
   if (!box) return;
-  box.checked ? state.picked.add(box.dataset.sub) : state.picked.delete(box.dataset.sub);
-  savePlan();
-  renderPlan();
-  announcePlan();
+  const sub = box.closest(".rec").dataset.sub;
+  box.checked ? state.picked.add(sub) : state.picked.delete(sub);
+  planChanged();
 });
 // clicking anywhere on a row ticks it, not just the small box
 recsPanel.addEventListener("click", e => {
   if (e.target.closest(".rec-check")) return;
   e.target.closest(".rec")?.querySelector(".rec-check").click();
 });
-$("pick-all").addEventListener("change", e => setPicked(shownRows(), e.target.checked));
+$("pick-all").addEventListener("change", e => setPicked(state.rows, e.target.checked));
 
 
 /* Summary box (beside the graph)
@@ -773,7 +751,7 @@ function renderTotal() {
   box.classList.toggle("d-none", !b);           // no month at all: the recommendations panel explains why
   if (!b) return box.replaceChildren();
 
-  const rows = shownRows();
+  const rows = state.rows;
   const picked = rows.filter(isPicked);
   const planning = picked.length > 0;
   const all = sumSavings(rows);
@@ -781,7 +759,6 @@ function renderTotal() {
   if (!planning && !all.counted.length) {
     return box.replaceChildren(make("span", "rec-total-detail", `No savings to add up for ${monthName(ym)} yet.`));
   }
-  box.classList.toggle("planning", planning);
 
   const label = planning
     ? `Your plan · ${picked.length} of ${rows.length} tips saves`
@@ -792,7 +769,7 @@ function renderTotal() {
   figures.append(
     make("span", "rec-money", money(t.spend)),
     make("span", "visually-hidden", " and "),
-    make("span", "rec-carbon", carbonKg(t.carbon)),
+    make("span", "rec-carbon", kg2(t.carbon)),
     make("span", "rec-per", planning ? `a month, out of ${money(all.spend)} possible` : "a month"),
   );
 
@@ -804,7 +781,7 @@ function renderTotal() {
     if (!inCat.length) continue;
     const c = sumSavings(inCat);
     const li = make("li", "");
-    li.append(make("span", "", cat), make("b", "", money(c.spend)), make("span", "", carbonKg(c.carbon)));
+    li.append(make("span", "", cat), make("b", "", money(c.spend)), make("span", "", kg2(c.carbon)));
     breakdown.append(li);
   }
 
@@ -842,7 +819,7 @@ function jumpLink(count, planning) {
   a.addEventListener("click", e => {
     e.preventDefault();
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    $("recs").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    recsPanel.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
     $("recs-title").focus({ preventScroll: true });
   });
   return a;
@@ -863,8 +840,6 @@ function showPersona(id) {
   try { sessionStorage.setItem(STORAGE_KEY, id); } catch {}
   personaBtn.textContent = `Example: ${p.persona}`;
   $("persona-footer").textContent = p.persona;
-  $("add-link").href = `/spending-form/form.html?customer=${id}`;
-  $("home-link").href = `/dashboard/dash.html?customer=${id}`;
   personaMenu.querySelectorAll(".dropdown-item").forEach(b => {
     const on = +b.dataset.id === id;
     b.classList.toggle("active", on);
@@ -883,7 +858,6 @@ personaMenu.addEventListener("click", async e => {
   }
   showPersona(+b.dataset.id);
   state.selected = null;
-  history.replaceState(null, "", location.pathname);
   loadEntries();
 });
 

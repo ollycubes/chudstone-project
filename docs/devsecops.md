@@ -67,7 +67,6 @@ To fix it you'd bump the version in `requirements.txt` to the fix version.
 
 | Step | Plan |
 |---|---|
-| Extra SAST | Add `bandit -r src`. Already in `requirements-dev.txt` |
 | Evidence | Plant a known issue, screenshot the finding, fix it, screenshot the clean run. Save these in `docs/evidence/`. Easy one for SCA: pin `jinja2==2.10` in `requirements.txt` on a branch |
 
 ## What should block a merge
@@ -76,8 +75,8 @@ To fix it you'd bump the version in `requirements.txt` to the fix version.
 |---|---|
 | Build fails | Yes |
 | Unit tests fail | Yes |
-| CodeQL / Bandit High or Critical | Yes |
-| CodeQL / Bandit Medium or Low | No, but make an issue for it |
+| CodeQL High or Critical | Yes |
+| CodeQL Medium or Low | No, but make an issue for it |
 | pip-audit finds a vulnerability | Yes. If there's no fix available yet, make an issue for it |
 | ZAP High (rules in `.zap/rules.tsv`) | Yes |
 | ZAP Medium / Low / Informational | No, but make an issue for it |
